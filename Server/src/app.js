@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import 'dotenv/config';
 import rateLimit from 'express-rate-limit';
 
 import dashboardRoutes from './routes/dashboard.routes.js';
