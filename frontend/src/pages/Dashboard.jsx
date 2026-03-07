@@ -14,13 +14,18 @@ export default function Dashboard() {
     fetchDashboard();
   }, []);
 
+  // Derive weekly platform breakdown from calendar data (last 7 days)
+  const weeklyData = data?.calendar
+    ? data.calendar.slice(0, 7).map(day => ({
+        date: day.date,
+        github: day.github?.commits ?? 0,
+        leetcode: day.leetcode?.problemsSolved ?? 0,
+        manual: day.manual?.score ?? 0,
+      }))
+    : [];
+
   return (
     <DashboardLayout>
-      {/* Debug blocks (can remove later) */}
-      <div className="bg-red-500 text-white p-4">
-        Dashboard is rendering
-      </div>
-
       {loading && (
         <div className="text-gray-400">Loading dashboard...</div>
       )}
@@ -30,19 +35,19 @@ export default function Dashboard() {
           <div className="space-y-8">
             <TopMetrics data={data} />
             <ActivityCalendar calendar={data.calendar} />
-            <PlatformBreakdown weeklyData={data.weeklyBreakdown} />
+            <PlatformBreakdown weeklyData={weeklyData} />
           </div>
 
           {/* Platform hint */}
           {!data.platforms?.github?.connected &&
             !data.platforms?.leetcode?.connected && (
-              <div className="bg-gray-900 border border-gray-800 rounded-lg p-4 text-sm text-gray-400">
-                You haven’t connected any platforms yet.
+              <div className="bg-gray-900 border border-gray-800 rounded-lg p-4 text-sm text-gray-400 mt-6">
+                You haven't connected any platforms yet.
                 You can still use manual tasks and goals, or connect GitHub/LeetCode anytime.
               </div>
             )}
 
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid gap-6 lg:grid-cols-2 mt-6">
             <ManualTasks tasks={data.recentTasks} />
             <Goals goals={data.goals} />
           </div>

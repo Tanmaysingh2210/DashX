@@ -3,39 +3,46 @@ import api from "../api/axios";
 import DashboardLayout from "../layouts/DashboardLayout";
 
 export default function Platforms() {
-    const [github, setGithub] = useState("");
-    const [leetcode, setLeetcode] = useState("");
+    const [githubUrl, setGithubUrl] = useState("");
+    const [leetcodeUrl, setLeetcodeUrl] = useState("");
     const [message, setMessage] = useState("");
+    const [error, setError]  = useState("");
 
-    const isValidUsername = value =>
-        /^[a-zA-Z0-9_-]{1,39}$/.test(value);
-
+    // Load existing connected platforms on mount
     useEffect(() => {
-        api.get("/user/platforms").then(res => {
-            setGithub(res.data.github?.username || "");
-            setLeetcode(res.data.leetcode?.username || "");
-        });
+        api.get("/user/platforms")
+            .then(res => {
+                setGithubUrl(res.data.github?.profileUrl || "");
+                setLeetcodeUrl(res.data.leetcode?.profileUrl || "");
+            })
+            .catch(() => {}); // silently ignore if not connected
     }, []);
 
     const savePlatforms = async () => {
         setMessage("");
-
-        if (github && !isValidUsername(github)) {
-            return setMessage("Invalid GitHub username format");
-        }
-
-        if (leetcode && !isValidUsername(leetcode)) {
-            return setMessage("Invalid LeetCode username format");
-        }
+        setError("");
 
         try {
-            await api.post("/user/platforms/connect", {
-                github,
-                leetcode
-            });
+            // Connect GitHub if URL provided
+            if (githubUrl.trim()) {
+                await api.post("/user/platforms/connect", {
+                    platform: "github",
+                    profileUrl: githubUrl.trim()
+                });
+            }
+
+            // Connect LeetCode if URL provided
+            if (leetcodeUrl.trim()) {
+                await api.post("/user/platforms/connect", {
+                    platform: "leetcode",
+                    profileUrl: leetcodeUrl.trim()
+                });
+            }
+
             setMessage("Platforms updated successfully");
-        } catch {
-            setMessage("Failed to update platforms");
+        } catch (err) {
+            const msg = err.response?.data?.message || "Failed to update platforms";
+            setError(msg);
         }
     };
 
@@ -46,24 +53,20 @@ export default function Platforms() {
                     Connect Platforms
                 </h2>
 
-                <label className="text-sm text-gray-400">
-                    GitHub username
-                </label>
+                <label className="text-sm text-gray-400">GitHub profile URL</label>
                 <input
                     className="w-full mb-4 p-2 bg-gray-900 border border-gray-700 rounded"
-                    value={github}
-                    onChange={e => setGithub(e.target.value)}
-                    placeholder="e.g. torvalds"
+                    value={githubUrl}
+                    onChange={e => setGithubUrl(e.target.value)}
+                    placeholder="https://github.com/torvalds"
                 />
 
-                <label className="text-sm text-gray-400">
-                    LeetCode username
-                </label>
+                <label className="text-sm text-gray-400">LeetCode profile URL</label>
                 <input
                     className="w-full mb-4 p-2 bg-gray-900 border border-gray-700 rounded"
-                    value={leetcode}
-                    onChange={e => setLeetcode(e.target.value)}
-                    placeholder="e.g. johndoe123"
+                    value={leetcodeUrl}
+                    onChange={e => setLeetcodeUrl(e.target.value)}
+                    placeholder="https://leetcode.com/u/johndoe"
                 />
 
                 <button
@@ -74,9 +77,10 @@ export default function Platforms() {
                 </button>
 
                 {message && (
-                    <div className="text-sm text-gray-400 mt-3">
-                        {message}
-                    </div>
+                    <div className="text-sm text-green-400 mt-3">{message}</div>
+                )}
+                {error && (
+                    <div className="text-sm text-red-400 mt-3">{error}</div>
                 )}
             </div>
         </DashboardLayout>

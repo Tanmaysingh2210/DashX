@@ -7,13 +7,7 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    const login = async (email, password) => {
-        const res = await api.post("/auth/login", { email, password });
-        localStorage.setItem("accessToken", res.data.accessToken);
-        localStorage.setItem("refreshToken", res.data.refreshToken);
-        setUser({ email });
-    };
-
+    // Restore session from localStorage on mount
     useEffect(() => {
         const token = localStorage.getItem("accessToken");
         if (token) {
@@ -22,15 +16,26 @@ export const AuthProvider = ({ children }) => {
         setLoading(false);
     }, []);
 
-    const logout = () => {
-        localStorage.clear();
-        setUser(null);
+    const login = async (email, password) => {
+        const res = await api.post("/auth/login", { email, password });
+        localStorage.setItem("accessToken", res.data.accessToken);
+        localStorage.setItem("refreshToken", res.data.refreshToken);
+        setUser({ email });
     };
 
-    useEffect(() => {
-        // later: validate token / refresh
-        setLoading(false);
-    }, []);
+    const logout = async () => {
+        const refreshToken = localStorage.getItem("refreshToken");
+        try {
+            if (refreshToken) {
+                await api.post("/auth/logout", { refreshToken });
+            }
+        } catch {
+            // silently ignore — we still clear local state
+        } finally {
+            localStorage.clear();
+            setUser(null);
+        }
+    };
 
     return (
         <AuthContext.Provider value={{ user, login, logout, loading }}>

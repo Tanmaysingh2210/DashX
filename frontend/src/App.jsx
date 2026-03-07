@@ -4,15 +4,38 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import GoalsPage from "./pages/GoalsPage";
+import ProtectedRoute from "./components/common/ProtectedRoute";
+
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/platforms" element={<Platforms />} />
-        <Route path="/dashboard" element={<Dashboard />}></Route>
-        <Route path="/goals" element={<GoalsPage />}></Route>
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/platforms"
+          element={
+            <ProtectedRoute>
+              <Platforms />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/goals"
+          element={
+            <ProtectedRoute>
+              <GoalsPage />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </BrowserRouter>
   );
