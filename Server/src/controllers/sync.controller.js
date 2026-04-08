@@ -22,12 +22,11 @@ export const dailySync = async (req, res) => {
         for (const user of users) {
             const date = getUserYesterdayDate(user.settings.timezone);
 
-            const exists = await DailyActivity.findOne({
+            let exists = await DailyActivity.findOne({
                 userId: user._id,
                 date
             });
 
-            if (exists) continue;
 
             let githubCommits = 0;
             let leetcodeSolved = 0;
@@ -62,17 +61,26 @@ export const dailySync = async (req, res) => {
                 }
             }
 
+            const manualScore = exists?.manual?.score || 0;
             const weightedScore =
                 githubCommits * SCORE_RULES.GITHUB_COMMIT_WEIGHT +
-                leetcodeSolved * SCORE_RULES.LEETCODE_PROBLEM_WEIGHT;
+                leetcodeSolved * SCORE_RULES.LEETCODE_PROBLEM_WEIGHT +
+                manualScore;
 
-            await DailyActivity.create({
-                userId: user._id,
-                date,
-                github: { commits: githubCommits },
-                leetcode: { problemsSolved: leetcodeSolved },
-                weightedScore
-            });
+            if (exists) {
+                exists.github = { commits: githubCommits };
+                exists.leetcode = { problemsSolved: leetcodeSolved };
+                exists.weightedScore = weightedScore;
+                await exists.save();
+            } else {
+                await DailyActivity.create({
+                    userId: user._id,
+                    date,
+                    github: { commits: githubCommits },
+                    leetcode: { problemsSolved: leetcodeSolved },
+                    weightedScore
+                });
+            }
 
             const update = {};
             if (user.platforms.github?.connected) {

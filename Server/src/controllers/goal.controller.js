@@ -1,6 +1,7 @@
 import Goal from '../models/Goal.js';
 import DailyActivity from '../models/DailyActivity.js';
 import { calculateCurrentStreak } from '../utils/streak.js';
+import { updateGoalsForUser } from '../utils/goalUpdater.js';
 
 export const createGoal = async (req, res) => {
   try {
@@ -23,7 +24,11 @@ export const createGoal = async (req, res) => {
       deadline
     });
 
-    res.status(201).json(goal);
+    await updateGoalsForUser(req.userId);
+
+    const updatedGoal = await Goal.findById(goal._id);
+
+    res.status(201).json(updatedGoal);
   } catch (err) {
     res.status(500).json({ message: 'Failed to create goal', error: err.message });
   }
