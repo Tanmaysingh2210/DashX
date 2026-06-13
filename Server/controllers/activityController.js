@@ -1,10 +1,10 @@
-import { syncUserActivity, calculateStreaks } from "../services/activityService";
+import { syncUserActivity, calculateStreaks } from "../services/activityService.js";
 import {
   validateGitHubUsername,
-}  from "../services/githubService";
+}  from "../services/githubService.js";
 import {
   validateLeetCodeUsername,
-} from "../services/leetcodeService";
+} from "../services/leetcodeService.js";
 import User from "../models/User.js";
 import Activity from "../models/Activity.js";
 // ─── POST /activity/sync ─────────────────────────────────────────────────────
