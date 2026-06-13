@@ -146,7 +146,7 @@ const getActiveYears = async (username) => {
  * @param {number} year
  * @returns {Array<{ date: string, count: number }>}
  */
-const fetchCalendarForYear = async (username, year) => {
+export const fetchCalendarForYear = async (username, year) => {
   const data = await leetcodeRequest(CALENDAR_BY_YEAR_QUERY, { username, year });
 
   const calendarString = data?.matchedUser?.userCalendar?.submissionCalendar;
@@ -168,7 +168,7 @@ const fetchCalendarForYear = async (username, year) => {
  *   Sorted ascending array of all submission days
  *   e.g. [{ date: "2022-06-01", count: 2 }, ...]
  */
-const fetchAllLeetCodeSubmissions = async (username) => {
+export const fetchAllLeetCodeSubmissions = async (username) => {
   console.log(`[LeetCode] fetching submissions for: ${username}`);
 
   // step 1 — get active years + current year calendar in ONE request
@@ -226,17 +226,11 @@ const fetchAllLeetCodeSubmissions = async (username) => {
  * @param {string} username
  * @returns {Promise<boolean>}
  */
-const validateLeetCodeUsername = async (username) => {
+export const validateLeetCodeUsername = async (username) => {
   try {
     const data = await leetcodeRequest(ACTIVE_YEARS_QUERY, { username });
     return !!data?.matchedUser;
   } catch {
     return false;
   }
-};
-
-module.exports = {
-  fetchAllLeetCodeSubmissions,
-  fetchCalendarForYear,
-  validateLeetCodeUsername,
 };

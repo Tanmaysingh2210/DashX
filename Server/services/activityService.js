@@ -1,7 +1,7 @@
-const { fetchAllGitHubContributions } = require("./githubService");
-const { fetchAllLeetCodeSubmissions } = require("./leetcodeService");
-const Activity = require("../models/Activity");
-const User = require("../models/User");
+import { fetchAllGitHubContributions } from "./githubService.js";
+import { fetchAllLeetCodeSubmissions } from "./leetcodeService.js";
+import User from "../models/User.js";
+import Activity from "../models/Activity.js";
 
 // ─── merge logic ─────────────────────────────────────────────────────────────
 
@@ -17,7 +17,7 @@ const User = require("../models/User");
  * @param {Array<{ date: string, count: number }>} leetcodeDays
  * @returns {Array<{ date: string, githubCount: number, leetcodeCount: number, totalCount: number }>}
  */
-const mergeDays = (githubDays, leetcodeDays) => {
+export const mergeDays = (githubDays, leetcodeDays) => {
   const map = new Map();
 
   // load github days
@@ -56,7 +56,7 @@ const mergeDays = (githubDays, leetcodeDays) => {
  * @param {Array<{ date: string, totalCount: number }>} mergedDays sorted ascending
  * @returns {{ currentStreak: number, longestStreak: number }}
  */
-const calculateStreaks = (mergedDays) => {
+export const calculateStreaks = (mergedDays) => {
   if (!mergedDays.length) return { currentStreak: 0, longestStreak: 0 };
 
   // build a Set of active dates for O(1) lookup
@@ -133,7 +133,7 @@ const calculateStreaks = (mergedDays) => {
  * @param {string} leetcodeUsername
  * @returns {{ currentStreak, longestStreak, totalDays, totalContributions }}
  */
-const syncUserActivity = async (userId, githubUsername, leetcodeUsername) => {
+export const syncUserActivity = async (userId, githubUsername, leetcodeUsername) => {
   console.log(`\n[Sync] starting for user ${userId}`);
   console.log(`[Sync] GitHub: ${githubUsername} | LeetCode: ${leetcodeUsername}`);
 
@@ -178,10 +178,4 @@ const syncUserActivity = async (userId, githubUsername, leetcodeUsername) => {
   console.log(`[Sync] done — streak: ${currentStreak}, longest: ${longestStreak}, total: ${totalContributions}`);
 
   return { currentStreak, longestStreak, totalDays, totalContributions };
-};
-
-module.exports = {
-  syncUserActivity,
-  mergeDays,
-  calculateStreaks,
 };
