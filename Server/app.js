@@ -6,6 +6,7 @@ import cors from "cors";
 import passport from "./config/passport.js";// registers the GitHub strategy
 import authRoutes from "./routes/authRoutes.js";
 import activityRoutes from "./routes/activityRoutes.js";
+import { errorHandler, notFound } from "./middleware/errorHandler.js";
 
 connectDB();
 const app = express();
@@ -21,10 +22,17 @@ app.use(
 
 app.use(passport.initialize());
 
-app.use("/auth", authRoutes);
-app.use("/activity", activityRoutes);
+
+
 //health check
 app.get("/", (req,res)=>res.json({status:"DashX API running"}));
+
+app.use("/auth", authRoutes);
+app.use("/activity", activityRoutes);
+
+app.use(notFound);
+app.use(errorHandler);
+
 
 const port = process.env.PORT;
 app.listen(port , ()=> {`Server running at port ${port}`});
