@@ -38,7 +38,7 @@ export const syncActivity = async (req, res) => {
       const minutesSinceSync =
         (Date.now() - new Date(user.lastSynced).getTime()) / 1000 / 60;
 
-      if (minutesSinceSync < 6) {
+      if (minutesSinceSync < 60) {
         return res.status(429).json({
           success: false,
           message: `Synced ${Math.floor(minutesSinceSync)} minutes ago. Please wait ${Math.ceil(60 - minutesSinceSync)} minutes.`,
