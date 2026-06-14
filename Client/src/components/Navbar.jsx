@@ -9,7 +9,7 @@ const NAV_LINKS = [
 ];
 
 const Navbar = () => {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, logout, loginWithGitHub } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -68,7 +68,7 @@ const Navbar = () => {
               </button>
             </>
           ) : (
-            <button className="btn btn--primary" onClick={() => navigate("/")}>
+            <button className="btn btn--primary" onClick={loginWithGitHub}>
               Get Started
             </button>
           )}

@@ -62,7 +62,14 @@ export const ActivityProvider = ({ children }) => {
     try {
       const { data } = await api.post("/activity/sync");
       await loadAll();
-      return { success: true, stats: data.stats };
+
+      // sync can "succeed" overall but have one source fail (e.g. bad
+      // GITHUB_PAT or LeetCode 403) — surface that as a warning
+      if (data.stats?.sourceErrors) {
+        setError(data.message);
+      }
+
+      return { success: true, stats: data.stats, message: data.message };
     } catch (err) {
       const message = err.response?.data?.message || "Sync failed";
       setError(message);

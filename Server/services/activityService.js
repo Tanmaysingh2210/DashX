@@ -3,6 +3,7 @@ import { fetchAllLeetCodeSubmissions } from "./leetcodeService.js";
 import User from "../models/User.js";
 import Activity from "../models/Activity.js";
 
+
 // ─── merge logic ─────────────────────────────────────────────────────────────
 
 /**
@@ -137,11 +138,38 @@ export const syncUserActivity = async (userId, githubUsername, leetcodeUsername)
   console.log(`\n[Sync] starting for user ${userId}`);
   console.log(`[Sync] GitHub: ${githubUsername} | LeetCode: ${leetcodeUsername}`);
 
-  // ── step 1 & 2 — fetch both in parallel ──
-  const [githubDays, leetcodeDays] = await Promise.all([
+  // ── step 1 & 2 — fetch both, but don't let one failure kill the other ──
+  // Promise.allSettled instead of Promise.all: if GitHub's PAT is bad or
+  // LeetCode returns a 403, we still want to save whatever DID succeed
+  // and update lastSynced — not crash silently.
+  const [githubResult, leetcodeResult] = await Promise.allSettled([
     fetchAllGitHubContributions(githubUsername),
     fetchAllLeetCodeSubmissions(leetcodeUsername),
   ]);
+
+  const githubDays = githubResult.status === "fulfilled" ? githubResult.value : [];
+  const leetcodeDays = leetcodeResult.status === "fulfilled" ? leetcodeResult.value : [];
+
+  const sourceErrors = {};
+  if (githubResult.status === "rejected") {
+    sourceErrors.github = githubResult.reason?.message || "Unknown GitHub error";
+    console.error(`[Sync] GitHub fetch failed for ${githubUsername}:`, sourceErrors.github);
+  }
+  if (leetcodeResult.status === "rejected") {
+    sourceErrors.leetcode = leetcodeResult.reason?.message || "Unknown LeetCode error";
+    console.error(`[Sync] LeetCode fetch failed for ${leetcodeUsername}:`, sourceErrors.leetcode);
+  }
+
+  // if BOTH sources failed, there's nothing to save — surface the error
+  // and do NOT update lastSynced, so the user can retry sooner
+  if (githubResult.status === "rejected" && leetcodeResult.status === "rejected") {
+    const err = new Error(
+      `Sync failed for both sources — GitHub: ${sourceErrors.github} | LeetCode: ${sourceErrors.leetcode}`
+    );
+    err.sourceErrors = sourceErrors;
+    throw err;
+  }
+
 
   console.log(`[Sync] fetched ${githubDays.length} GitHub days, ${leetcodeDays.length} LeetCode days`);
 
@@ -168,6 +196,7 @@ export const syncUserActivity = async (userId, githubUsername, leetcodeUsername)
   }
 
   // ── step 5 — update lastSynced on user ──
+  // we reach here as long as AT LEAST ONE source succeeded
   await User.findByIdAndUpdate(userId, { lastSynced: new Date() });
 
   // ── compute summary stats ──
@@ -177,5 +206,12 @@ export const syncUserActivity = async (userId, githubUsername, leetcodeUsername)
 
   console.log(`[Sync] done — streak: ${currentStreak}, longest: ${longestStreak}, total: ${totalContributions}`);
 
-  return { currentStreak, longestStreak, totalDays, totalContributions };
+  return {
+    currentStreak,
+    longestStreak,
+    totalDays,
+    totalContributions,
+    // present only if a source partially failed — frontend can surface this
+    ...(Object.keys(sourceErrors).length > 0 && { sourceErrors }),
+  };
 };

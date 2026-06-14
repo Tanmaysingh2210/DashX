@@ -7,6 +7,8 @@ import {
 } from "../services/leetcodeService.js";
 import User from "../models/User.js";
 import Activity from "../models/Activity.js";
+
+
 // ─── POST /activity/sync ─────────────────────────────────────────────────────
 
 /**
@@ -54,8 +56,12 @@ export const syncActivity = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Sync complete",
-      stats, // { currentStreak, longestStreak, totalDays, totalContributions }
+      message: stats.sourceErrors
+        ? `Sync partially completed — ${Object.entries(stats.sourceErrors)
+            .map(([source, msg]) => `${source}: ${msg}`)
+            .join(" | ")}`
+        : "Sync complete",
+      stats, // { currentStreak, longestStreak, totalDays, totalContributions, sourceErrors? }
     });
   } catch (err) {
     console.error("[syncActivity] error:", err.message);
