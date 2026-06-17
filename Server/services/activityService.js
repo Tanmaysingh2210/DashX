@@ -42,16 +42,45 @@ export const mergeDays = (githubDays, leetcodeDays) => {
 // ─── streak calculator ────────────────────────────────────────────────────────
 
 /**
+ * Returns the date string for N days before a given YYYY-MM-DD string.
+ * Pure string/number math — never touches Date() timezone conversion,
+ * so DST transitions can't corrupt the diff.
+ */
+const subtractDay = (dateStr, n = 1) => {
+  // split "2024-06-14" → year=2024, month=06, day=14
+  const [year, month, day] = dateStr.split("-").map(Number);
+  // use UTC constructor to avoid local timezone shifting the date
+  const d = new Date(Date.UTC(year, month - 1, day));
+  d.setUTCDate(d.getUTCDate() - n);
+  return d.toISOString().split("T")[0];
+};
+
+/**
+ * Returns the diff in whole days between two YYYY-MM-DD strings.
+ * Uses UTC to avoid DST making the diff come out as 0.958 or 1.041.
+ */
+const daysBetween = (dateStrA, dateStrB) => {
+  const [ya, ma, da] = dateStrA.split("-").map(Number);
+  const [yb, mb, db] = dateStrB.split("-").map(Number);
+  const msA = Date.UTC(ya, ma - 1, da);
+  const msB = Date.UTC(yb, mb - 1, db);
+  return Math.round((msB - msA) / (1000 * 60 * 60 * 24));
+};
+
+/**
  * Calculates current streak and longest streak.
  * Input only contains active days (totalCount > 0) — that's all we store now.
+ * Days must be sorted ascending by date.
  */
 export const calculateStreaks = (activeDays) => {
   if (!activeDays.length) return { currentStreak: 0, longestStreak: 0 };
 
   const activeDates = new Set(activeDays.map((d) => d.date));
+
+  // today in UTC — same format as stored dates "YYYY-MM-DD"
   const today = new Date().toISOString().split("T")[0];
 
-  // ── longest streak ──
+  // ── longest streak (sliding window over sorted active days) ──
   let longestStreak = 0;
   let runningStreak = 0;
   let prevDate = null;
@@ -60,32 +89,31 @@ export const calculateStreaks = (activeDays) => {
     if (!prevDate) {
       runningStreak = 1;
     } else {
-      const diffDays =
-        (new Date(date) - new Date(prevDate)) / (1000 * 60 * 60 * 24);
-      runningStreak = diffDays === 1 ? runningStreak + 1 : 1;
+      // exactly 1 day apart → extend streak; any gap → reset to 1
+      const diff = daysBetween(prevDate, date);
+      runningStreak = diff === 1 ? runningStreak + 1 : 1;
     }
     longestStreak = Math.max(longestStreak, runningStreak);
     prevDate = date;
   }
 
-  // ── current streak (walk backward from today) ──
+  // ── current streak (walk backward from today using safe subtractDay) ──
   let currentStreak = 0;
-  let checkDate = new Date(today);
+  let checkDate = today;
 
-  // grace period — if nothing today yet, start from yesterday
+  // grace period — if nothing logged today yet, start from yesterday
   if (!activeDates.has(today)) {
-    checkDate.setDate(checkDate.getDate() - 1);
+    checkDate = subtractDay(today, 1);
   }
 
-  while (true) {
-    const dateStr = checkDate.toISOString().split("T")[0];
-    if (!activeDates.has(dateStr)) break;
+  while (activeDates.has(checkDate)) {
     currentStreak++;
-    checkDate.setDate(checkDate.getDate() - 1);
+    checkDate = subtractDay(checkDate, 1);
   }
 
   return { currentStreak, longestStreak };
 };
+
 
 // ─── shared fetch + save logic ────────────────────────────────────────────────
 

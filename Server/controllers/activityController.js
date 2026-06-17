@@ -125,7 +125,7 @@ export const getStats = async (req, res) => {
     const userId = req.user._id;
 
     // fetch all activity for streak calculation
-    const allDays = await Activity.find({ userId })
+    const allDays = await Activity.find({ userId , totalCount: {$gt: 0 } })
       .sort({ date: 1 })
       .select("-_id date totalCount githubCount leetcodeCount")
       .lean();
