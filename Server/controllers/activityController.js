@@ -8,7 +8,6 @@ import {
 import User from "../models/User.js";
 import Activity from "../models/Activity.js";
 
-
 // ─── POST /activity/sync ─────────────────────────────────────────────────────
 
 /**
@@ -47,11 +46,12 @@ export const syncActivity = async (req, res) => {
       }
     }
 
-    // run full sync — this is the heavy call (fetches all years)
+    // run smart sync — passes lastSynced so service knows full vs incremental
     const stats = await syncUserActivity(
       user._id,
       user.githubUsername,
-      user.leetcodeUsername
+      user.leetcodeUsername,
+      user.lastSynced   // null = first sync (full), date = repeat (incremental)
     );
 
     res.status(200).json({
@@ -202,6 +202,31 @@ export const validateUsernames = async (req, res) => {
     });
   } catch (err) {
     console.error("[validateUsernames] error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// ─── DELETE /activity/cleanup ─────────────────────────────────────────────────
+
+/**
+ * One-time cleanup: removes all Activity docs where totalCount === 0.
+ * Safe to call multiple times (idempotent).
+ * These are legacy docs from before the "only save non-zero" change.
+ */
+export const cleanupZeroDays = async (req, res) => {
+  try {
+    const result = await Activity.deleteMany({
+      userId: req.user._id,
+      totalCount: 0,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Removed ${result.deletedCount} zero-count documents`,
+      deletedCount: result.deletedCount,
+    });
+  } catch (err) {
+    console.error("[cleanupZeroDays] error:", err.message);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };

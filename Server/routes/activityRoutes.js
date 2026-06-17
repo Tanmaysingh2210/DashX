@@ -4,6 +4,7 @@ import {
   getHeatmap,
   getStats,
   validateUsernames,
+  cleanupZeroDays
 } from "../controllers/activityController.js";
 import { verifyToken } from "../middleware/verifyToken.js";
 
@@ -37,5 +38,11 @@ router.get("/stats", getStats);
  * Body: { leetcodeUsername }
  */
 router.post("/validate", validateUsernames);
+
+/**
+ * DELETE /activity/cleanup
+ * Removes legacy zero-count documents — run once after upgrading
+ */
+router.delete("/cleanup", cleanupZeroDays);
 
 export default router;

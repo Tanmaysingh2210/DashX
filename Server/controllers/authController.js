@@ -172,11 +172,6 @@ import { syncUserActivity } from "../services/activityService.js";
 
 
 
-
-
-
-
-
 // ─── helpers ────────────────────────────────────────────────────────────────
 
 /**
@@ -320,9 +315,8 @@ export const setupLeetcode = async (req, res) => {
     });
 
     // trigger first sync in background AFTER response is sent
-    // this way the setup page doesn't hang waiting for all-years fetch
-    // frontend can poll GET /activity/stats until lastSynced is populated
-    syncUserActivity(user._id, user.githubUsername, cleaned)
+    // lastSynced is null (first time) so service does a full all-years fetch
+    syncUserActivity(user._id, user.githubUsername, cleaned, null)
       .then(() => console.log(`[Setup] first sync complete for ${user.githubUsername}`))
       .catch((err) => console.error(`[Setup] first sync failed for ${user.githubUsername}:`, err.message));
 

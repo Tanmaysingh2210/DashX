@@ -218,6 +218,25 @@ export const fetchAllLeetCodeSubmissions = async (username) => {
   // shape: [{ date: "2022-06-01", count: 2 }, ...]
 };
 
+// ─── incremental export — fetch CURRENT YEAR only ───────────────────────────
+
+/**
+ * Fetches only the current year's submission days — 1 GraphQL request.
+ * Used for repeat syncs — past years never change.
+ *
+ * @param {string} username
+ * @returns {Promise<Array<{ date: string, count: number }>>}
+ */
+export const fetchCurrentYearLeetCodeSubmissions = async (username) => {
+  const currentYear = new Date().getFullYear();
+  console.log(`[LeetCode] incremental fetch — ${currentYear} only for ${username}`);
+
+  const days = await fetchCalendarForYear(username, currentYear);
+  console.log(`[LeetCode] ${currentYear}: ${days.length} active days fetched`);
+
+  return days;
+};
+
 // ─── utility — validate a LeetCode username exists ───────────────────────────
 
 /**

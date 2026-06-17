@@ -194,6 +194,29 @@ export const fetchAllGitHubContributions = async (username) => {
   // shape: [{ date: "2021-03-15", count: 4, weekday: 1 }, ...]
 };
 
+// ─── incremental export — fetch CURRENT YEAR only ───────────────────────────
+
+/**
+ * Fetches only the current year's contribution days — 1 GraphQL request.
+ *
+ * Used for repeat syncs: a user's contribution calendar for past years
+ * never changes, so re-fetching all years on every sync is wasted calls.
+ * Only the current year can have new activity since the last sync.
+ *
+ * @param {string} username
+ * @returns {Promise<Array<{ date: string, count: number, weekday: number }>>}
+ */
+export const fetchCurrentYearGitHubContributions = async (username) => {
+  const currentYear = new Date().getFullYear();
+  console.log(`[GitHub] incremental fetch — ${currentYear} only for ${username}`);
+
+  const { totalContributions, days } = await fetchContributionsForYear(username, currentYear);
+
+  console.log(`[GitHub] ${currentYear}: ${totalContributions} contributions, ${days.length} days fetched`);
+
+  return days;
+};
+
 // ─── utility — validate a GitHub username exists ─────────────────────────────
 
 /**

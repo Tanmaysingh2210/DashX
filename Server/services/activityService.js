@@ -1,8 +1,7 @@
-import { fetchAllGitHubContributions } from "./githubService.js";
-import { fetchAllLeetCodeSubmissions } from "./leetcodeService.js";
+import { fetchAllGitHubContributions ,fetchCurrentYearGitHubContributions } from "./githubService.js";
+import { fetchAllLeetCodeSubmissions , fetchCurrentYearLeetCodeSubmissions } from "./leetcodeService.js";
 import User from "../models/User.js";
 import Activity from "../models/Activity.js";
-
 
 // ─── merge logic ─────────────────────────────────────────────────────────────
 
@@ -11,31 +10,25 @@ import Activity from "../models/Activity.js";
  * Both inputs have shape: [{ date: "YYYY-MM-DD", count: number }]
  *
  * Output shape: [{ date, githubCount, leetcodeCount, totalCount }]
- *
- * Uses a Map keyed by date for O(n) merge — no nested loops.
- *
- * @param {Array<{ date: string, count: number }>} githubDays
- * @param {Array<{ date: string, count: number }>} leetcodeDays
- * @returns {Array<{ date: string, githubCount: number, leetcodeCount: number, totalCount: number }>}
+ * Only returns days where totalCount > 0 — zero days are never stored.
  */
 export const mergeDays = (githubDays, leetcodeDays) => {
   const map = new Map();
 
-  // load github days
   for (const { date, count } of githubDays) {
-    map.set(date, { githubCount: count, leetcodeCount: 0 });
+    if (count > 0) map.set(date, { githubCount: count, leetcodeCount: 0 });
   }
 
-  // merge leetcode days on top
   for (const { date, count } of leetcodeDays) {
-    if (map.has(date)) {
-      map.get(date).leetcodeCount = count;
-    } else {
-      map.set(date, { githubCount: 0, leetcodeCount: count });
+    if (count > 0) {
+      if (map.has(date)) {
+        map.get(date).leetcodeCount = count;
+      } else {
+        map.set(date, { githubCount: 0, leetcodeCount: count });
+      }
     }
   }
 
-  // flatten to array, compute totalCount, sort ascending
   return Array.from(map.entries())
     .map(([date, { githubCount, leetcodeCount }]) => ({
       date,
@@ -49,51 +42,28 @@ export const mergeDays = (githubDays, leetcodeDays) => {
 // ─── streak calculator ────────────────────────────────────────────────────────
 
 /**
- * Calculates current streak and longest streak from merged activity.
- *
- * Current streak: consecutive days ending today (or yesterday if nothing today yet)
- * Longest streak: max consecutive active days ever
- *
- * @param {Array<{ date: string, totalCount: number }>} mergedDays sorted ascending
- * @returns {{ currentStreak: number, longestStreak: number }}
+ * Calculates current streak and longest streak.
+ * Input only contains active days (totalCount > 0) — that's all we store now.
  */
-export const calculateStreaks = (mergedDays) => {
-  if (!mergedDays.length) return { currentStreak: 0, longestStreak: 0 };
+export const calculateStreaks = (activeDays) => {
+  if (!activeDays.length) return { currentStreak: 0, longestStreak: 0 };
 
-  // build a Set of active dates for O(1) lookup
-  const activeDates = new Set(
-    mergedDays.filter((d) => d.totalCount > 0).map((d) => d.date)
-  );
-
+  const activeDates = new Set(activeDays.map((d) => d.date));
   const today = new Date().toISOString().split("T")[0];
 
-  // ── longest streak (sliding window) ──
+  // ── longest streak ──
   let longestStreak = 0;
   let runningStreak = 0;
   let prevDate = null;
 
-  for (const { date, totalCount } of mergedDays) {
-    if (totalCount === 0) {
-      runningStreak = 0;
-      prevDate = null;
-      continue;
-    }
-
+  for (const { date } of activeDays) {
     if (!prevDate) {
       runningStreak = 1;
     } else {
-      // check if this date is exactly 1 day after previous active date
-      const prev = new Date(prevDate);
-      const curr = new Date(date);
-      const diffDays = (curr - prev) / (1000 * 60 * 60 * 24);
-
-      if (diffDays === 1) {
-        runningStreak++;
-      } else {
-        runningStreak = 1; // gap — reset
-      }
+      const diffDays =
+        (new Date(date) - new Date(prevDate)) / (1000 * 60 * 60 * 24);
+      runningStreak = diffDays === 1 ? runningStreak + 1 : 1;
     }
-
     longestStreak = Math.max(longestStreak, runningStreak);
     prevDate = date;
   }
@@ -102,7 +72,7 @@ export const calculateStreaks = (mergedDays) => {
   let currentStreak = 0;
   let checkDate = new Date(today);
 
-  // if nothing today yet, start from yesterday (grace period)
+  // grace period — if nothing today yet, start from yesterday
   if (!activeDates.has(today)) {
     checkDate.setDate(checkDate.getDate() - 1);
   }
@@ -117,101 +87,135 @@ export const calculateStreaks = (mergedDays) => {
   return { currentStreak, longestStreak };
 };
 
-// ─── main sync function ───────────────────────────────────────────────────────
+// ─── shared fetch + save logic ────────────────────────────────────────────────
 
 /**
- * Full sync pipeline for one user:
- *   1. Fetch GitHub contributions
- *   2. Fetch LeetCode submissions
- *   3. Merge by date
- *   4. Bulk upsert into Activity collection
- *   5. Update user.lastSynced
+ * Fetches from both sources (full or incremental), merges, bulk-upserts,
+ * and updates lastSynced.
  *
- * Uses bulkWrite with upsert so re-syncing is safe — no duplicates.
- *
- * @param {string} userId         - MongoDB user _id
+ * @param {string} userId
  * @param {string} githubUsername
  * @param {string} leetcodeUsername
- * @returns {{ currentStreak, longestStreak, totalDays, totalContributions }}
+ * @param {boolean} incrementalOnly - true for repeat syncs (current year only)
  */
-export const syncUserActivity = async (userId, githubUsername, leetcodeUsername) => {
-  console.log(`\n[Sync] starting for user ${userId}`);
-  console.log(`[Sync] GitHub: ${githubUsername} | LeetCode: ${leetcodeUsername}`);
+export const fetchMergeAndSave = async (
+  userId,
+  githubUsername,
+  leetcodeUsername,
+  incrementalOnly
+) => {
+  const githubFn = incrementalOnly
+    ? fetchCurrentYearGitHubContributions
+    : fetchAllGitHubContributions;
 
-  // ── step 1 & 2 — fetch both, but don't let one failure kill the other ──
-  // Promise.allSettled instead of Promise.all: if GitHub's PAT is bad or
-  // LeetCode returns a 403, we still want to save whatever DID succeed
-  // and update lastSynced — not crash silently.
+  const leetcodeFn = incrementalOnly
+    ? fetchCurrentYearLeetCodeSubmissions
+    : fetchAllLeetCodeSubmissions;
+
   const [githubResult, leetcodeResult] = await Promise.allSettled([
-    fetchAllGitHubContributions(githubUsername),
-    fetchAllLeetCodeSubmissions(leetcodeUsername),
+    githubFn(githubUsername),
+    leetcodeFn(leetcodeUsername),
   ]);
 
-  const githubDays = githubResult.status === "fulfilled" ? githubResult.value : [];
+  const githubDays  = githubResult.status  === "fulfilled" ? githubResult.value  : [];
   const leetcodeDays = leetcodeResult.status === "fulfilled" ? leetcodeResult.value : [];
 
   const sourceErrors = {};
   if (githubResult.status === "rejected") {
     sourceErrors.github = githubResult.reason?.message || "Unknown GitHub error";
-    console.error(`[Sync] GitHub fetch failed for ${githubUsername}:`, sourceErrors.github);
+    console.error(`[Sync] GitHub fetch failed:`, sourceErrors.github);
   }
   if (leetcodeResult.status === "rejected") {
     sourceErrors.leetcode = leetcodeResult.reason?.message || "Unknown LeetCode error";
-    console.error(`[Sync] LeetCode fetch failed for ${leetcodeUsername}:`, sourceErrors.leetcode);
+    console.error(`[Sync] LeetCode fetch failed:`, sourceErrors.leetcode);
   }
 
-  // if BOTH sources failed, there's nothing to save — surface the error
-  // and do NOT update lastSynced, so the user can retry sooner
   if (githubResult.status === "rejected" && leetcodeResult.status === "rejected") {
     const err = new Error(
-      `Sync failed for both sources — GitHub: ${sourceErrors.github} | LeetCode: ${sourceErrors.leetcode}`
+      `Both sources failed — GitHub: ${sourceErrors.github} | LeetCode: ${sourceErrors.leetcode}`
     );
     err.sourceErrors = sourceErrors;
     throw err;
   }
 
+  console.log(
+    `[Sync] fetched ${githubDays.length} GitHub days, ${leetcodeDays.length} LeetCode days`
+  );
 
-  console.log(`[Sync] fetched ${githubDays.length} GitHub days, ${leetcodeDays.length} LeetCode days`);
-
-  // ── step 3 — merge ──
+  // merge — only non-zero days come back from mergeDays()
   const mergedDays = mergeDays(githubDays, leetcodeDays);
-  console.log(`[Sync] merged into ${mergedDays.length} unique days`);
+  console.log(`[Sync] ${mergedDays.length} active days to save`);
 
-  // ── step 4 — bulk upsert into MongoDB ──
-  // upsert = insert if not exists, update if exists
-  // this makes re-sync safe — no duplicate documents
-  const bulkOps = mergedDays.map(({ date, githubCount, leetcodeCount, totalCount }) => ({
-    updateOne: {
-      filter: { userId, date },
-      update: { $set: { githubCount, leetcodeCount, totalCount } },
-      upsert: true,
-    },
-  }));
+  if (mergedDays.length > 0) {
+    const bulkOps = mergedDays.map(({ date, githubCount, leetcodeCount, totalCount }) => ({
+      updateOne: {
+        filter: { userId, date },
+        update: { $set: { githubCount, leetcodeCount, totalCount } },
+        upsert: true,
+      },
+    }));
 
-  if (bulkOps.length > 0) {
     const result = await Activity.bulkWrite(bulkOps, { ordered: false });
     console.log(
-      `[Sync] DB write — upserted: ${result.upsertedCount}, modified: ${result.modifiedCount}`
+      `[Sync] DB — upserted: ${result.upsertedCount}, modified: ${result.modifiedCount}`
     );
   }
 
-  // ── step 5 — update lastSynced on user ──
-  // we reach here as long as AT LEAST ONE source succeeded
+  // update lastSynced — we reached here so at least one source succeeded
   await User.findByIdAndUpdate(userId, { lastSynced: new Date() });
 
-  // ── compute summary stats ──
-  const { currentStreak, longestStreak } = calculateStreaks(mergedDays);
-  const totalDays = mergedDays.filter((d) => d.totalCount > 0).length;
-  const totalContributions = mergedDays.reduce((sum, d) => sum + d.totalCount, 0);
+  return { sourceErrors };
+};
 
-  console.log(`[Sync] done — streak: ${currentStreak}, longest: ${longestStreak}, total: ${totalContributions}`);
+// ─── main sync function ───────────────────────────────────────────────────────
+
+/**
+ * Smart sync:
+ *   - FIRST sync (lastSynced === null): fetch ALL years from both sources
+ *   - REPEAT sync: fetch current year only — past years never change
+ *
+ * For streak/stats calculation after a repeat sync, we re-read all active
+ * days from the DB (already filtered to non-zero) rather than re-fetching
+ * everything from the API.
+ *
+ * @param {string} userId
+ * @param {string} githubUsername
+ * @param {string} leetcodeUsername
+ * @param {Date|null} lastSynced
+ */
+export const syncUserActivity = async (userId, githubUsername, leetcodeUsername, lastSynced) => {
+  console.log(`\n[Sync] starting for user ${userId}`);
+
+  const isFirstSync = !lastSynced;
+  console.log(`[Sync] mode: ${isFirstSync ? "FULL (first sync)" : "INCREMENTAL (current year only)"}`);
+
+  const { sourceErrors } = await fetchMergeAndSave(
+    userId,
+    githubUsername,
+    leetcodeUsername,
+    !isFirstSync  // incrementalOnly = true for repeat syncs
+  );
+
+  // read all active days from DB for accurate streak calculation
+  // (much faster than re-fetching all years from the API again)
+  const allActiveDays = await Activity.find({ userId })
+    .sort({ date: 1 })
+    .select("-_id date totalCount")
+    .lean();
+
+  const { currentStreak, longestStreak } = calculateStreaks(allActiveDays);
+  const totalDays = allActiveDays.length; // every doc is active (totalCount > 0)
+  const totalContributions = allActiveDays.reduce((s, d) => s + d.totalCount, 0);
+
+  console.log(
+    `[Sync] done — streak: ${currentStreak}, longest: ${longestStreak}, total: ${totalContributions}, docs: ${totalDays}`
+  );
 
   return {
     currentStreak,
     longestStreak,
     totalDays,
     totalContributions,
-    // present only if a source partially failed — frontend can surface this
     ...(Object.keys(sourceErrors).length > 0 && { sourceErrors }),
   };
 };

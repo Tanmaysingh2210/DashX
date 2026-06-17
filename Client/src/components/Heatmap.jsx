@@ -5,22 +5,39 @@ const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "S
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 /**
- * Returns the color intensity bucket (0-4) for a given count,
- * using the max count in the dataset to scale thresholds.
+ * Determines the cell's color type based on what kind of activity happened.
+ *
+ *   github-only   → green  (githubCount > 0, leetcodeCount === 0)
+ *   leetcode-only → orange (leetcodeCount > 0, githubCount === 0)
+ *   both          → blue   (both > 0)
+ *   none          → empty  (totalCount === 0)
+ *
+ * @returns {"empty"|"github"|"leetcode"|"both"}
+ */
+const getCellType = (day) => {
+  if (day.totalCount === 0) return "empty";
+  if (day.githubCount > 0 && day.leetcodeCount > 0) return "both";
+  if (day.githubCount > 0) return "github";
+  return "leetcode";
+};
+
+/**
+ * Returns intensity level 1-4 based on count vs the max for that type.
+ * Level 0 is always "empty" — handled separately.
  */
 const getLevel = (count, max) => {
-  if (count === 0) return 0;
-  if (max <= 4) return Math.min(count, 4); // small datasets — 1:1 mapping
+  if (count === 0 || max === 0) return 0;
+  if (max <= 4) return Math.min(count, 4);
   const ratio = count / max;
   if (ratio > 0.75) return 4;
-  if (ratio > 0.5) return 3;
+  if (ratio > 0.5)  return 3;
   if (ratio > 0.25) return 2;
   return 1;
 };
 
 /**
- * Builds a 53-week x 7-day grid ending today, filling in any
- * missing dates with zero counts so the grid is always complete.
+ * Builds a 53-week × 7-day grid ending today.
+ * Days not in the `days` array are treated as zero.
  */
 const buildWeeks = (days) => {
   const map = new Map(days.map((d) => [d.date, d]));
@@ -28,7 +45,6 @@ const buildWeeks = (days) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // start on the Sunday that begins the week 52 weeks ago
   const start = new Date(today);
   start.setDate(start.getDate() - 52 * 7);
   start.setDate(start.getDate() - start.getDay()); // back up to Sunday
@@ -43,10 +59,10 @@ const buildWeeks = (days) => {
       const entry = map.get(dateStr);
       week.push({
         date: dateStr,
-        githubCount: entry?.githubCount || 0,
+        githubCount:   entry?.githubCount   || 0,
         leetcodeCount: entry?.leetcodeCount || 0,
-        totalCount: entry?.totalCount || 0,
-        month: current.getMonth(),
+        totalCount:    entry?.totalCount    || 0,
+        month:    current.getMonth(),
         isFuture: current > today,
       });
       current.setDate(current.getDate() + 1);
@@ -57,22 +73,16 @@ const buildWeeks = (days) => {
   return weeks;
 };
 
-/**
- * Heatmap
- *
- * @param {Array<{ date, githubCount, leetcodeCount, totalCount }>} days
- */
 const Heatmap = ({ days = [] }) => {
   const [hovered, setHovered] = useState(null);
 
   const weeks = useMemo(() => buildWeeks(days), [days]);
 
-  const maxCount = useMemo(
-    () => days.reduce((max, d) => Math.max(max, d.totalCount), 1),
-    [days]
-  );
+  // separate maxes per type so intensity scales correctly within each color
+  const maxGithub   = useMemo(() => days.reduce((m, d) => Math.max(m, d.githubCount),   1), [days]);
+  const maxLeetcode = useMemo(() => days.reduce((m, d) => Math.max(m, d.leetcodeCount), 1), [days]);
+  const maxTotal    = useMemo(() => days.reduce((m, d) => Math.max(m, d.totalCount),    1), [days]);
 
-  // figure out which weeks should show a month label (first week containing day 1-7 of a new month)
   const monthMarkers = useMemo(() => {
     const markers = [];
     let lastMonth = -1;
@@ -85,6 +95,26 @@ const Heatmap = ({ days = [] }) => {
     });
     return markers;
   }, [weeks]);
+
+  /**
+   * Returns the CSS class string for a cell.
+   *
+   *   empty                → heatmap__cell--empty
+   *   github-only lvl 1-4  → heatmap__cell--github-1 … --github-4
+   *   leetcode-only lvl 1-4→ heatmap__cell--leetcode-1 … --leetcode-4
+   *   both lvl 1-4         → heatmap__cell--both-1 … --both-4
+   */
+  const getCellClass = (day) => {
+    const type = getCellType(day);
+    if (type === "empty") return "heatmap__cell heatmap__cell--empty";
+
+    let level;
+    if (type === "github")   level = getLevel(day.githubCount,   maxGithub);
+    if (type === "leetcode") level = getLevel(day.leetcodeCount, maxLeetcode);
+    if (type === "both")     level = getLevel(day.totalCount,    maxTotal);
+
+    return `heatmap__cell heatmap__cell--${type}-${level}`;
+  };
 
   return (
     <div className="heatmap">
@@ -111,21 +141,20 @@ const Heatmap = ({ days = [] }) => {
 
           <div className="heatmap__grid">
             {weeks.map((week, wi) => (
-              <div className="heatmap__week" key={wi} style={{ animationDelay: `${Math.min(wi * 6, 300)}ms` }}>
-                {week.map((day) => {
-                  const level = getLevel(day.totalCount, maxCount);
-                  return (
-                    <div
-                      key={day.date}
-                      className={`heatmap__cell heatmap__cell--lvl${level} ${
-                        day.isFuture ? "heatmap__cell--future" : ""
-                      }`}
-                      style={{ animationDelay: `${Math.min(wi * 6, 300)}ms` }}
-                      onMouseEnter={() => setHovered(day)}
-                      onMouseLeave={() => setHovered(null)}
-                    />
-                  );
-                })}
+              <div
+                className="heatmap__week"
+                key={wi}
+                style={{ animationDelay: `${Math.min(wi * 6, 300)}ms` }}
+              >
+                {week.map((day) => (
+                  <div
+                    key={day.date}
+                    className={`${getCellClass(day)} ${day.isFuture ? "heatmap__cell--future" : ""}`}
+                    style={{ animationDelay: `${Math.min(wi * 6, 300)}ms` }}
+                    onMouseEnter={() => setHovered(day)}
+                    onMouseLeave={() => setHovered(null)}
+                  />
+                ))}
               </div>
             ))}
           </div>
@@ -134,33 +163,55 @@ const Heatmap = ({ days = [] }) => {
 
       <div className="heatmap__footer">
         <div className="heatmap__tooltip" aria-live="polite">
-          {hovered ? (
+          {hovered && hovered.totalCount > 0 ? (
             <>
               <span className="heatmap__tooltip-date">
                 {new Date(hovered.date).toLocaleDateString(undefined, {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
+                  month: "short", day: "numeric", year: "numeric",
                 })}
               </span>
-              <span className="heatmap__tooltip-detail">
-                <span className="dot dot--github" /> {hovered.githubCount} commits
-              </span>
-              <span className="heatmap__tooltip-detail">
-                <span className="dot dot--leetcode" /> {hovered.leetcodeCount} solved
-              </span>
+              {hovered.githubCount > 0 && (
+                <span className="heatmap__tooltip-detail">
+                  <span className="dot dot--github" /> {hovered.githubCount} commit{hovered.githubCount > 1 ? "s" : ""}
+                </span>
+              )}
+              {hovered.leetcodeCount > 0 && (
+                <span className="heatmap__tooltip-detail">
+                  <span className="dot dot--leetcode" /> {hovered.leetcodeCount} solved
+                </span>
+              )}
             </>
           ) : (
             <span className="heatmap__tooltip-hint">Hover a day to see details</span>
           )}
         </div>
 
+        {/* three-section legend matching actual colors */}
         <div className="heatmap__legend">
-          <span>Less</span>
-          {[0, 1, 2, 3, 4].map((lvl) => (
-            <span key={lvl} className={`heatmap__legend-swatch heatmap__cell--lvl${lvl}`} />
-          ))}
-          <span>More</span>
+          <span className="heatmap__legend-group">
+            <span className="dot dot--github" /> GitHub
+            <span className="heatmap__legend-swatches">
+              {[1, 2, 3, 4].map((lvl) => (
+                <span key={lvl} className={`heatmap__legend-swatch heatmap__cell--github-${lvl}`} />
+              ))}
+            </span>
+          </span>
+          <span className="heatmap__legend-group">
+            <span className="dot dot--leetcode" /> LeetCode
+            <span className="heatmap__legend-swatches">
+              {[1, 2, 3, 4].map((lvl) => (
+                <span key={lvl} className={`heatmap__legend-swatch heatmap__cell--leetcode-${lvl}`} />
+              ))}
+            </span>
+          </span>
+          <span className="heatmap__legend-group">
+            <span className="dot dot--combined" /> Both
+            <span className="heatmap__legend-swatches">
+              {[1, 2, 3, 4].map((lvl) => (
+                <span key={lvl} className={`heatmap__legend-swatch heatmap__cell--both-${lvl}`} />
+              ))}
+            </span>
+          </span>
         </div>
       </div>
     </div>

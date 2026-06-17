@@ -105,22 +105,28 @@
   visibility: hidden;
 }
 
-/* intensity levels — blue scale (matches "Combined" legend dot) */
-.heatmap__cell--lvl0 {
+/* ── empty ── */
+.heatmap__cell--empty {
   background-color: var(--color-surface-high);
 }
-.heatmap__cell--lvl1 {
-  background-color: #1d3a66;
-}
-.heatmap__cell--lvl2 {
-  background-color: #2f5aa3;
-}
-.heatmap__cell--lvl3 {
-  background-color: #4d8eff;
-}
-.heatmap__cell--lvl4 {
-  background-color: var(--color-primary);
-}
+
+/* ── GitHub only — green scale ── */
+.heatmap__cell--github-1 { background-color: #1a3d1f; }
+.heatmap__cell--github-2 { background-color: #25582c; }
+.heatmap__cell--github-3 { background-color: #38883f; }
+.heatmap__cell--github-4 { background-color: var(--color-secondary); }
+
+/* ── LeetCode only — orange scale ── */
+.heatmap__cell--leetcode-1 { background-color: #3d2a0f; }
+.heatmap__cell--leetcode-2 { background-color: #6b430f; }
+.heatmap__cell--leetcode-3 { background-color: #c47b1a; }
+.heatmap__cell--leetcode-4 { background-color: var(--color-tertiary); }
+
+/* ── both — blue scale ── */
+.heatmap__cell--both-1 { background-color: #1d3a66; }
+.heatmap__cell--both-2 { background-color: #2f5aa3; }
+.heatmap__cell--both-3 { background-color: #4d8eff; }
+.heatmap__cell--both-4 { background-color: var(--color-primary); }
 
 /* ── footer: tooltip + legend ── */
 
@@ -180,9 +186,24 @@
 .heatmap__legend {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-6);
   font-size: var(--fs-label-md);
   color: var(--color-outline);
+}
+
+.heatmap__legend-group {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: var(--fs-body-md);
+}
+
+.heatmap__legend-swatches {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: 4px;
 }
 
 .heatmap__legend-swatch {
