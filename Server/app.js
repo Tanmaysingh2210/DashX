@@ -41,7 +41,7 @@ app.get("/ping", (req, res) => {
 
 cron.schedule("*/5 * * * *", async () => {
   try {
-    await fetch("https://api.aalsicoders.com/ping");
+    await fetch("https://api.aalsicoders.in/ping");
     console.log("self ping succesful");
 
   } catch (error) {
