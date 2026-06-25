@@ -16,15 +16,29 @@ import {
 import "./Activity.css";
 
 const formatDate = (dateStr) => {
-  const date = new Date(dateStr);
+  // parse without Date() constructor to avoid timezone shift
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const diffDays = Math.round((today - date) / (1000 * 60 * 60 * 24));
+  const todayUTC = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+  const diffDays = Math.round((todayUTC - date) / (1000 * 60 * 60 * 24));
 
   if (diffDays === 0) return "Today";
   if (diffDays === 1) return "Yesterday";
   if (diffDays < 7) return `${diffDays} days ago`;
-  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" });
+};
+
+/**
+ * Returns a YYYY-MM-DD string for N days ago in UTC.
+ */
+const utcDateStr = (daysAgo = 0) => {
+  const d = new Date();
+  return new Date(Date.UTC(
+    d.getUTCFullYear(),
+    d.getUTCMonth(),
+    d.getUTCDate() - daysAgo
+  )).toISOString().split("T")[0];
 };
 
 const Activity = () => {
@@ -37,41 +51,57 @@ const Activity = () => {
   const data = useMemo(() => {
     if (!days.length) return null;
 
-    const last7 = days.slice(-7);
-    const last30 = days.slice(-30);
+    // Build a Set for O(1) date lookup
+    const activeDateSet = new Set(days.map((d) => d.date));
+    const dayMap = new Map(days.map((d) => [d.date, d]));
 
-    const weeklyActivity = last7.reduce((s, d) => s + d.totalCount, 0);
-    const activeDays30 = last30.filter((d) => d.totalCount > 0).length;
-    const problemsThisWeek = last7.reduce((s, d) => s + d.leetcodeCount, 0);
+    const today = utcDateStr(0);
 
-    const githubLast30 = last30.reduce((s, d) => s + d.githubCount, 0);
-    const leetcodeLast30 = last30.reduce((s, d) => s + d.leetcodeCount, 0);
-    const total30 = githubLast30 + leetcodeLast30;
+    // ── last 7 calendar days (not last 7 active days) ──
+    const sevenDaysAgo = utcDateStr(6);
+    const last7Days = days.filter((d) => d.date >= sevenDaysAgo);
+    const weeklyActivity   = last7Days.reduce((s, d) => s + d.totalCount,    0);
+    const problemsThisWeek = last7Days.reduce((s, d) => s + d.leetcodeCount, 0);
 
-    const githubPct = total30 ? Math.round((githubLast30 / total30) * 100) : 0;
-    const leetcodePct = total30 ? 100 - githubPct : 0;
-    const activeDaysPct = Math.round((activeDays30 / last30.length) * 100);
+    // ── previous 7 days (for velocity comparison) ──
+    const fourteenDaysAgo = utcDateStr(13);
+    const prev7Days  = days.filter((d) => d.date >= fourteenDaysAgo && d.date < sevenDaysAgo);
+    const prevWeekly = prev7Days.reduce((s, d) => s + d.totalCount, 0);
+    const velocityChange = prevWeekly > 0
+      ? Math.round(((weeklyActivity - prevWeekly) / prevWeekly) * 100)
+      : null;
 
-    const dailyAvg = activeDays30 ? (total30 / activeDays30).toFixed(1) : "0";
+    // ── last 30 CALENDAR days ──
+    const thirtyDaysAgo = utcDateStr(29);
+    const last30Days     = days.filter((d) => d.date >= thirtyDaysAgo);
+    const githubLast30   = last30Days.reduce((s, d) => s + d.githubCount,   0);
+    const leetcodeLast30 = last30Days.reduce((s, d) => s + d.leetcodeCount, 0);
+    const total30        = githubLast30 + leetcodeLast30;
 
-    // ── timeline: most recent active days, newest first ──
-    const timeline = [...days]
-      .reverse()
-      .filter((d) => d.totalCount > 0)
-      .slice(0, 6);
+    // count active calendar days in last 30
+    let activeDays30 = 0;
+    for (let i = 0; i < 30; i++) {
+      if (activeDateSet.has(utcDateStr(i))) activeDays30++;
+    }
 
-    // ── insights, computed from real numbers ──
-    const prev7 = days.slice(-14, -7);
-    const prevWeekly = prev7.reduce((s, d) => s + d.totalCount, 0);
-    const velocityChange =
-      prevWeekly > 0 ? Math.round(((weeklyActivity - prevWeekly) / prevWeekly) * 100) : null;
+    const githubPct     = total30 ? Math.round((githubLast30  / total30) * 100) : 0;
+    const leetcodePct   = total30 ? 100 - githubPct : 0;
+    const activeDaysPct = Math.round((activeDays30 / 30) * 100);
 
-    // weekday with most total activity
+    // daily average = total ÷ 30 calendar days (consistent with Dashboard)
+    const dailyAvg = (total30 / 30).toFixed(1);
+
+    // ── timeline: most recent active days newest first ──
+    const timeline = [...days].reverse().slice(0, 6);
+
+    // ── most active weekday — UTC-safe ──
     const weekdayTotals = new Array(7).fill(0);
-    days.forEach((d) => {
-      weekdayTotals[new Date(d.date).getDay()] += d.totalCount;
-    });
     const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    days.forEach((d) => {
+      const [y, m, day] = d.date.split("-").map(Number);
+      const wd = new Date(Date.UTC(y, m - 1, day)).getUTCDay();
+      weekdayTotals[wd] += d.totalCount;
+    });
     const peakDay = dayNames[weekdayTotals.indexOf(Math.max(...weekdayTotals))];
 
     return {
@@ -107,7 +137,7 @@ const Activity = () => {
             <StatCard
               label="Weekly activity"
               value={data?.weeklyActivity ?? 0}
-              sub="actions this week"
+              sub="contributions this week"
               icon={<TrendIcon />}
               accent="primary"
               delay={0}
@@ -124,7 +154,7 @@ const Activity = () => {
             <StatCard
               label="Active days"
               value={`${data?.activeDays30 ?? 0} / 30`}
-              sub="last 30 days"
+              sub="last 30 calendar days"
               icon={<CalendarIcon />}
               accent="secondary"
               delay={120}
@@ -192,30 +222,19 @@ const Activity = () => {
                 <SparklesIcon /> Insights
               </h2>
 
-              <InsightCard
-                icon={<TrendIcon />}
-                accent="secondary"
-                title="Weekly velocity"
-                delay={240}
-              >
+              <InsightCard icon={<TrendIcon />} accent="secondary" title="Weekly velocity" delay={240}>
                 {data?.velocityChange === null && "Keep going to start tracking week-over-week trends."}
                 {data?.velocityChange !== null && data?.velocityChange >= 0 && (
-                  <>
-                    Your activity is up{" "}
+                  <>Your activity is up{" "}
                     <strong className="insight-card__highlight insight-card__highlight--secondary">
                       {data.velocityChange}%
-                    </strong>{" "}
-                    compared to last week.
-                  </>
+                    </strong>{" "}compared to last week.</>
                 )}
                 {data?.velocityChange < 0 && (
-                  <>
-                    Activity is down{" "}
+                  <>Activity is down{" "}
                     <strong className="insight-card__highlight insight-card__highlight--tertiary">
                       {Math.abs(data.velocityChange)}%
-                    </strong>{" "}
-                    from last week — a good day to get back on track.
-                  </>
+                    </strong>{" "}from last week — a good day to get back on track.</>
                 )}
               </InsightCard>
 
@@ -223,23 +242,20 @@ const Activity = () => {
                 You're most active on{" "}
                 <strong className="insight-card__highlight insight-card__highlight--primary">
                   {data?.peakDay ?? "—"}
-                </strong>
-                . Plan your hardest problems for that day.
+                </strong>. Plan your hardest problems for that day.
               </InsightCard>
 
               <InsightCard icon={<ZapIcon />} accent="tertiary" title="Algorithm focus" delay={360}>
                 You solved{" "}
                 <strong className="insight-card__highlight insight-card__highlight--tertiary">
                   {data?.leetcodeLast30 ?? 0} LeetCode problems
-                </strong>{" "}
-                in the last 30 days.
+                </strong>{" "}in the last 30 days.
               </InsightCard>
 
               <InsightCard icon={<GitHubIcon />} accent="secondary" title="Shipping pace" delay={420}>
                 <strong className="insight-card__highlight insight-card__highlight--secondary">
                   {data?.githubLast30 ?? 0} GitHub contributions
-                </strong>{" "}
-                logged over the last 30 days.
+                </strong>{" "}logged over the last 30 days.
               </InsightCard>
             </div>
           </div>
@@ -260,7 +276,7 @@ const Activity = () => {
               <div className="breakdown__avg">
                 <span className="label-md">Daily average</span>
                 <p className="display breakdown__avg-value">{data?.dailyAvg ?? "0"}</p>
-                <span className="body-md">contributions</span>
+                <span className="body-md">contributions / day</span>
               </div>
             </div>
           </div>
