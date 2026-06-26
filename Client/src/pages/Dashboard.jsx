@@ -303,7 +303,7 @@ const Dashboard = () => {
   const insights = useMemo(() => {
     if (!days.length) return null;
 
-    const githubTotal   = days.reduce((s, d) => s + d.githubCount,   0);
+    const githubTotal = days.reduce((s, d) => s + d.githubCount, 0);
     const leetcodeTotal = days.reduce((s, d) => s + d.leetcodeCount, 0);
 
     // ── weekday + month bucketing ──
@@ -311,7 +311,7 @@ const Dashboard = () => {
     // uses LOCAL timezone. In IST (UTC+5:30) a Monday date becomes Sunday night UTC.
     // Fix: parse the date string directly without Date() to avoid timezone shift.
     const weekdayTotals = new Array(7).fill(0);
-    const monthTotals   = {};
+    const monthTotals = {};
 
     days.forEach((d) => {
       // parse "YYYY-MM-DD" directly — no Date() constructor, no timezone shift
@@ -379,7 +379,7 @@ const Dashboard = () => {
     const avgPerDay = (last30Total / 30).toFixed(1);
 
     // last active date per platform
-    const lastGithub   = [...days].reverse().find((d) => d.githubCount   > 0);
+    const lastGithub = [...days].reverse().find((d) => d.githubCount > 0);
     const lastLeetcode = [...days].reverse().find((d) => d.leetcodeCount > 0);
 
     // last 7 days totals — use calendar days not slice
@@ -389,8 +389,8 @@ const Dashboard = () => {
       today.getUTCDate() - 6
     )).toISOString().split("T")[0];
 
-    const last7Days    = days.filter((d) => d.date >= sevenDaysAgo);
-    const githubWeekly  = last7Days.reduce((s, d) => s + d.githubCount,   0);
+    const last7Days = days.filter((d) => d.date >= sevenDaysAgo);
+    const githubWeekly = last7Days.reduce((s, d) => s + d.githubCount, 0);
     const leetcodeWeekly = last7Days.reduce((s, d) => s + d.leetcodeCount, 0);
 
     return {
@@ -453,9 +453,9 @@ const Dashboard = () => {
               delay={60}
             />
             <StatCard
-              label="LeetCode submissions"
+              label="LeetCode attempts"
               value={insights?.leetcodeTotal ?? 0}
-              sub={insights ? `${insights.leetcodeWeekly} this week` : undefined}
+              sub={insights ? `${insights.leetcodeWeekly} this week (incl. failed)` : undefined}
               icon={<LeetCodeIcon />}
               accent="tertiary"
               subTone="warning"
@@ -496,29 +496,29 @@ const Dashboard = () => {
 
           <div className="dashboard__panels">
             <ActivityPanel
-            title="GitHub activity"
-            accent="secondary"
-            icon={<GitHubIcon />}
-            rows={[
-              { label: "Contributions this week", value: insights?.githubWeekly ?? 0 },
-              { label: "Last 12 months",          value: insights?.githubTotal  ?? 0 },
-              { label: "Username", value: `@${user?.githubUsername}`, mono: true },
-            ]}
-            lastActive={insights?.lastGithub?.date}
-            delay={300}
-          />
-          <ActivityPanel
-            title="LeetCode activity"
-            accent="tertiary"
-            icon={<LeetCodeIcon />}
-            rows={[
-              { label: "Submissions this week", value: insights?.leetcodeWeekly ?? 0 },
-              { label: "Last 12 months",        value: insights?.leetcodeTotal  ?? 0 },
-              { label: "Username", value: `${user?.leetcodeUsername}`, mono: true },
-            ]}
-            lastActive={insights?.lastLeetcode?.date}
-            delay={360}
-          />
+              title="GitHub activity"
+              accent="secondary"
+              icon={<GitHubIcon />}
+              rows={[
+                { label: "Contributions this week", value: insights?.githubWeekly ?? 0 },
+                { label: "Last 12 months", value: insights?.githubTotal ?? 0 },
+                { label: "Username", value: `@${user?.githubUsername}`, mono: true },
+              ]}
+              lastActive={insights?.lastGithub?.date}
+              delay={300}
+            />
+            <ActivityPanel
+              title="LeetCode activity"
+              accent="tertiary"
+              icon={<LeetCodeIcon />}
+              rows={[
+                { label: "Attempts this week", value: insights?.leetcodeWeekly ?? 0 },
+                { label: "Last 12 months (incl. failed)", value: insights?.leetcodeTotal ?? 0 },
+                { label: "Username", value: `${user?.leetcodeUsername}`, mono: true },
+              ]}
+              lastActive={insights?.lastLeetcode?.date}
+              delay={360}
+            />
           </div>
         </>
       )}

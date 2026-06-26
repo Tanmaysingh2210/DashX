@@ -60,12 +60,12 @@ const Activity = () => {
     // ── last 7 calendar days (not last 7 active days) ──
     const sevenDaysAgo = utcDateStr(6);
     const last7Days = days.filter((d) => d.date >= sevenDaysAgo);
-    const weeklyActivity   = last7Days.reduce((s, d) => s + d.totalCount,    0);
+    const weeklyActivity = last7Days.reduce((s, d) => s + d.totalCount, 0);
     const problemsThisWeek = last7Days.reduce((s, d) => s + d.leetcodeCount, 0);
 
     // ── previous 7 days (for velocity comparison) ──
     const fourteenDaysAgo = utcDateStr(13);
-    const prev7Days  = days.filter((d) => d.date >= fourteenDaysAgo && d.date < sevenDaysAgo);
+    const prev7Days = days.filter((d) => d.date >= fourteenDaysAgo && d.date < sevenDaysAgo);
     const prevWeekly = prev7Days.reduce((s, d) => s + d.totalCount, 0);
     const velocityChange = prevWeekly > 0
       ? Math.round(((weeklyActivity - prevWeekly) / prevWeekly) * 100)
@@ -73,10 +73,10 @@ const Activity = () => {
 
     // ── last 30 CALENDAR days ──
     const thirtyDaysAgo = utcDateStr(29);
-    const last30Days     = days.filter((d) => d.date >= thirtyDaysAgo);
-    const githubLast30   = last30Days.reduce((s, d) => s + d.githubCount,   0);
+    const last30Days = days.filter((d) => d.date >= thirtyDaysAgo);
+    const githubLast30 = last30Days.reduce((s, d) => s + d.githubCount, 0);
     const leetcodeLast30 = last30Days.reduce((s, d) => s + d.leetcodeCount, 0);
-    const total30        = githubLast30 + leetcodeLast30;
+    const total30 = githubLast30 + leetcodeLast30;
 
     // count active calendar days in last 30
     let activeDays30 = 0;
@@ -84,8 +84,8 @@ const Activity = () => {
       if (activeDateSet.has(utcDateStr(i))) activeDays30++;
     }
 
-    const githubPct     = total30 ? Math.round((githubLast30  / total30) * 100) : 0;
-    const leetcodePct   = total30 ? 100 - githubPct : 0;
+    const githubPct = total30 ? Math.round((githubLast30 / total30) * 100) : 0;
+    const leetcodePct = total30 ? 100 - githubPct : 0;
     const activeDaysPct = Math.round((activeDays30 / 30) * 100);
 
     // daily average = total ÷ 30 calendar days (consistent with Dashboard)
@@ -160,9 +160,9 @@ const Activity = () => {
               delay={120}
             />
             <StatCard
-              label="Problems solved"
+              label="LeetCode attempts"
               value={data?.problemsThisWeek ?? 0}
-              sub="this week"
+              sub="this week (incl. failed submits)"
               icon={<CodeIcon />}
               accent="tertiary"
               subTone="warning"
@@ -245,11 +245,12 @@ const Activity = () => {
                 </strong>. Plan your hardest problems for that day.
               </InsightCard>
 
-              <InsightCard icon={<ZapIcon />} accent="tertiary" title="Algorithm focus" delay={360}>
-                You solved{" "}
+              <InsightCard icon={<ZapIcon />} accent="tertiary" title="LeetCode activity" delay={360}>
+                You made{" "}
                 <strong className="insight-card__highlight insight-card__highlight--tertiary">
-                  {data?.leetcodeLast30 ?? 0} LeetCode problems
-                </strong>{" "}in the last 30 days.
+                  {data?.leetcodeLast30 ?? 0} submission attempts
+                </strong>{" "}
+                in the last 30 days (includes failed submits — accepted count is on your LeetCode profile).
               </InsightCard>
 
               <InsightCard icon={<GitHubIcon />} accent="secondary" title="Shipping pace" delay={420}>
