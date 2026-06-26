@@ -496,29 +496,29 @@ const Dashboard = () => {
 
           <div className="dashboard__panels">
             <ActivityPanel
-              title="GitHub activity"
-              accent="secondary"
-              icon={<GitHubIcon />}
-              rows={[
-                { label: "Contributions this week", value: insights?.githubWeekly ?? 0 },
-                { label: "All-time contributions", value: insights?.githubTotal ?? 0 },
-                { label: "Username", value: `@${user?.githubUsername}`, mono: true },
-              ]}
-              lastActive={insights?.lastGithub?.date}
-              delay={300}
-            />
-            <ActivityPanel
-              title="LeetCode activity"
-              accent="tertiary"
-              icon={<LeetCodeIcon />}
-              rows={[
-                { label: "Submissions this week", value: insights?.leetcodeWeekly ?? 0 },
-                { label: "All-time submissions", value: insights?.leetcodeTotal ?? 0 },
-                { label: "Username", value: `${user?.leetcodeUsername}`, mono: true },
-              ]}
-              lastActive={insights?.lastLeetcode?.date}
-              delay={360}
-            />
+            title="GitHub activity"
+            accent="secondary"
+            icon={<GitHubIcon />}
+            rows={[
+              { label: "Contributions this week", value: insights?.githubWeekly ?? 0 },
+              { label: "Last 12 months",          value: insights?.githubTotal  ?? 0 },
+              { label: "Username", value: `@${user?.githubUsername}`, mono: true },
+            ]}
+            lastActive={insights?.lastGithub?.date}
+            delay={300}
+          />
+          <ActivityPanel
+            title="LeetCode activity"
+            accent="tertiary"
+            icon={<LeetCodeIcon />}
+            rows={[
+              { label: "Submissions this week", value: insights?.leetcodeWeekly ?? 0 },
+              { label: "Last 12 months",        value: insights?.leetcodeTotal  ?? 0 },
+              { label: "Username", value: `${user?.leetcodeUsername}`, mono: true },
+            ]}
+            lastActive={insights?.lastLeetcode?.date}
+            delay={360}
+          />
           </div>
         </>
       )}

@@ -82,17 +82,11 @@
 }
 
 @keyframes cellIn {
-  from {
-    opacity: 0;
-    transform: scale(0.4);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  from { opacity: 0; transform: scale(0.4); }
+  to   { opacity: 1; transform: scale(1);   }
 }
 
-/* stagger delay is applied inline per-week via style prop */
+/* stagger delay applied inline */
 
 .heatmap__cell:hover {
   transform: scale(1.35);
@@ -105,24 +99,20 @@
   visibility: hidden;
 }
 
-/* ── empty ── */
-.heatmap__cell--empty {
-  background-color: var(--color-surface-high);
-}
+/* ── intensity levels ── */
 
-/* ── GitHub only — green scale ── */
-.heatmap__cell--github-1 { background-color: #1a3d1f; }
-.heatmap__cell--github-2 { background-color: #25582c; }
-.heatmap__cell--github-3 { background-color: #38883f; }
-.heatmap__cell--github-4 { background-color: var(--color-secondary); }
+.heatmap__cell--empty     { background-color: var(--color-surface-high); }
 
-/* ── LeetCode only — orange scale ── */
+.heatmap__cell--github-1  { background-color: #1a3d1f; }
+.heatmap__cell--github-2  { background-color: #25582c; }
+.heatmap__cell--github-3  { background-color: #38883f; }
+.heatmap__cell--github-4  { background-color: var(--color-secondary); }
+
 .heatmap__cell--leetcode-1 { background-color: #3d2a0f; }
 .heatmap__cell--leetcode-2 { background-color: #6b430f; }
 .heatmap__cell--leetcode-3 { background-color: #c47b1a; }
 .heatmap__cell--leetcode-4 { background-color: var(--color-tertiary); }
 
-/* ── both — blue scale ── */
 .heatmap__cell--both-1 { background-color: #1d3a66; }
 .heatmap__cell--both-2 { background-color: #2f5aa3; }
 .heatmap__cell--both-3 { background-color: #4d8eff; }
@@ -132,11 +122,13 @@
 
 .heatmap__footer {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-4);
   flex-wrap: wrap;
 }
+
+/* ── tooltip ── */
 
 .heatmap__tooltip {
   display: flex;
@@ -145,6 +137,7 @@
   font-size: var(--fs-body-md);
   color: var(--color-on-surface-variant);
   min-height: 20px;
+  flex-wrap: wrap;
 }
 
 .heatmap__tooltip-date {
@@ -164,24 +157,7 @@
   font-size: var(--fs-label-md);
 }
 
-.dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: var(--radius-full);
-}
-
-.dot--github {
-  background-color: var(--color-secondary);
-}
-
-.dot--leetcode {
-  background-color: var(--color-tertiary);
-}
-
-.dot--combined {
-  background-color: var(--color-primary);
-}
+/* ── legend ── */
 
 .heatmap__legend {
   display: flex;
@@ -189,6 +165,7 @@
   gap: var(--space-6);
   font-size: var(--fs-label-md);
   color: var(--color-outline);
+  flex-wrap: wrap;
 }
 
 .heatmap__legend-group {
@@ -212,4 +189,51 @@
   border-radius: 3px;
   animation: none;
   opacity: 1;
+}
+
+/* ── dot helpers ── */
+
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+}
+
+.dot--github   { background-color: var(--color-secondary); }
+.dot--leetcode { background-color: var(--color-tertiary);  }
+.dot--combined { background-color: var(--color-primary);   }
+
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── tablet (≤ 900px) ──
+   Legend wraps to two lines: GitHub + LeetCode on top, Both below  */
+@media (max-width: 900px) {
+  .heatmap__footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+
+  .heatmap__legend {
+    gap: var(--space-4);
+  }
+}
+
+/* ── mobile (≤ 600px) ──
+   Each legend group gets its own line; tooltip stacks vertically  */
+@media (max-width: 600px) {
+  .heatmap__legend {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+
+  .heatmap__tooltip {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-1);
+  }
 }

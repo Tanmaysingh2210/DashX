@@ -20,6 +20,8 @@
   background-color: rgba(255, 180, 171, 0.06);
 }
 
+/* ── stat cards ── */
+
 .dashboard__stats {
   grid-template-columns: repeat(4, 1fr);
 }
@@ -45,6 +47,7 @@
   gap: var(--space-4);
   font-size: var(--fs-body-md);
   color: var(--color-on-surface-variant);
+  flex-wrap: wrap;
 }
 
 .dashboard__heatmap-legend span {
@@ -52,6 +55,8 @@
   align-items: center;
   gap: 6px;
 }
+
+/* ── heatmap footer stats (Best Streak / Most Active / Peak / Avg) ── */
 
 .dashboard__heatmap-stats {
   display: grid;
@@ -152,16 +157,20 @@
   animation: spin 800ms linear infinite;
 }
 
-/* ── responsive ── */
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════════════════ */
 
+/* ── large tablet (≤ 1024px) ── */
 @media (max-width: 1024px) {
   .dashboard__stats {
     grid-template-columns: repeat(2, 1fr);
   }
 
+  /* heatmap stats: 2×2 grid */
   .dashboard__heatmap-stats {
     grid-template-columns: repeat(2, 1fr);
-    gap: var(--space-6);
+    gap: var(--space-4) var(--space-6);
   }
 
   .dashboard__panels {
@@ -169,11 +178,79 @@
   }
 }
 
-@media (max-width: 640px) {
+/* ── tablet (≤ 768px) ──
+   Header legend: "GitHub only" + "LeetCode only" on first row,
+   "Both" drops to its own row so nothing overflows                */
+@media (max-width: 768px) {
+  .dashboard__heatmap-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  /* wrap after first two items so "Both" always starts a new line */
+  .dashboard__heatmap-legend {
+    gap: var(--space-3);
+  }
+
+  /* force "Both" to always be on its own line */
+  .dashboard__heatmap-legend span:nth-child(3) {
+    flex-basis: 100%;
+  }
+
+  /* heatmap footer stats: 2×2 */
+  .dashboard__heatmap-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ── mobile (≤ 600px) ── */
+@media (max-width: 600px) {
+  .dashboard {
+    padding-top: var(--space-6);
+    padding-bottom: 60px;
+  }
+
+  /* stat cards: single column */
   .dashboard__stats {
     grid-template-columns: 1fr;
   }
 
+  /* heatmap footer stats: 2 per row, tighter */
+  .dashboard__heatmap-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-3);
+  }
+
+  /* hide icon on very small screens to save space */
+  .heatmap-stat__icon {
+    display: none;
+  }
+
+  /* all three legend groups each on own line */
+  .dashboard__heatmap-legend {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  /* remove the nth-child override since it's all columns now */
+  .dashboard__heatmap-legend span:nth-child(3) {
+    flex-basis: auto;
+  }
+
+  .dashboard__header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .dashboard__header .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ── small mobile (≤ 400px) ── */
+@media (max-width: 400px) {
+  /* heatmap stats: single column on very small phones */
   .dashboard__heatmap-stats {
     grid-template-columns: 1fr;
   }
