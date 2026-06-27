@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useActivity } from "../context/ActivityContext";
 import api from "../api/axios";
@@ -32,15 +32,37 @@ const Settings = () => {
   const [isPublic, setIsPublic] = useState(user?.isPublic ?? true);
   const [privacySaving, setPrivacySaving] = useState(false);
 
-  // ── preference toggles — UI-level only (not yet backed by an API) ──
+  // ── preference toggles ──
   const [prefs, setPrefs] = useState({
-    autoSync: true,
-    includePrivate: false,
-    weeklyReports: false,
-    notifications: true,
+    autoSync: user?.autoSync ?? true,
+    includePrivate: user?.includePrivate ?? false,
+    weeklyReports: user?.weeklyReports ?? false,
+    notifications: user?.notifications ?? true,
   });
 
-  const togglePref = (key) => setPrefs((p) => ({ ...p, [key]: !p[key] }));
+  useEffect(() => {
+    if (user) {
+      setIsPublic(user.isPublic ?? true);
+      setPrefs({
+        autoSync: user.autoSync ?? true,
+        includePrivate: user.includePrivate ?? false,
+        weeklyReports: user.weeklyReports ?? false,
+        notifications: user.notifications ?? true,
+      });
+    }
+  }, [user]);
+
+  const togglePref = async (key) => {
+    const newValue = !prefs[key];
+    setPrefs((p) => ({ ...p, [key]: newValue }));
+    try {
+      await api.patch("/auth/preferences", { [key]: newValue });
+      await refreshUser();
+    } catch {
+      // revert on failure
+      setPrefs((p) => ({ ...p, [key]: !newValue }));
+    }
+  };
 
   const handleSaveLeetcode = async (e) => {
     e.preventDefault();
@@ -79,6 +101,7 @@ const Settings = () => {
     setPrivacySaving(true);
     try {
       await api.patch("/public/privacy", { isPublic: newValue });
+      await refreshUser();
     } catch {
       // revert on failure
       setIsPublic(!newValue);

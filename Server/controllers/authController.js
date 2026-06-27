@@ -52,8 +52,21 @@ export const githubCallback = (req, res) => {
  * Returns the currently logged-in user's profile.
  */
 export const getMe = (req, res) => {
-  const { _id, githubUsername, leetcodeUsername, avatar, email, lastSynced, longestStreak, createdAt } =
-    req.user;
+  const {
+    _id,
+    githubUsername,
+    leetcodeUsername,
+    avatar,
+    email,
+    lastSynced,
+    longestStreak,
+    createdAt,
+    isPublic,
+    autoSync,
+    includePrivate,
+    weeklyReports,
+    notifications,
+  } = req.user;
 
   res.status(200).json({
     success: true,
@@ -67,6 +80,11 @@ export const getMe = (req, res) => {
       longestStreak: longestStreak || 0,
       joinedAt: createdAt,
       isSetupComplete: !!leetcodeUsername,
+      isPublic: isPublic ?? true,
+      autoSync: autoSync ?? true,
+      includePrivate: includePrivate ?? false,
+      weeklyReports: weeklyReports ?? false,
+      notifications: notifications ?? true,
     },
   });
 };
@@ -111,6 +129,11 @@ export const setupLeetcode = async (req, res) => {
         leetcodeUsername: user.leetcodeUsername,
         avatar: user.avatar,
         isSetupComplete: true,
+        isPublic: user.isPublic ?? true,
+        autoSync: user.autoSync ?? true,
+        includePrivate: user.includePrivate ?? false,
+        weeklyReports: user.weeklyReports ?? false,
+        notifications: user.notifications ?? true,
       },
     });
 
@@ -122,6 +145,47 @@ export const setupLeetcode = async (req, res) => {
 
   } catch (err) {
     console.error("[setupLeetcode] error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+/**
+ * PATCH /auth/preferences
+ * Body: { autoSync, includePrivate, weeklyReports, notifications }
+ */
+export const updatePreferences = async (req, res) => {
+  try {
+    const { autoSync, includePrivate, weeklyReports, notifications } = req.body;
+    const updates = {};
+    if (typeof autoSync === "boolean") updates.autoSync = autoSync;
+    if (typeof includePrivate === "boolean") updates.includePrivate = includePrivate;
+    if (typeof weeklyReports === "boolean") updates.weeklyReports = weeklyReports;
+    if (typeof notifications === "boolean") updates.notifications = notifications;
+
+    const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true });
+
+    res.status(200).json({
+      success: true,
+      message: "Preferences updated successfully",
+      user: {
+        id: user._id,
+        githubUsername: user.githubUsername,
+        leetcodeUsername: user.leetcodeUsername,
+        avatar: user.avatar,
+        email: user.email,
+        lastSynced: user.lastSynced,
+        longestStreak: user.longestStreak || 0,
+        joinedAt: user.createdAt,
+        isSetupComplete: !!user.leetcodeUsername,
+        isPublic: user.isPublic ?? true,
+        autoSync: user.autoSync ?? true,
+        includePrivate: user.includePrivate ?? false,
+        weeklyReports: user.weeklyReports ?? false,
+        notifications: user.notifications ?? true,
+      },
+    });
+  } catch (err) {
+    console.error("[updatePreferences] error:", err.message);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };

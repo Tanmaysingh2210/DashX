@@ -5,6 +5,7 @@ import {
     getMe,
     setupLeetcode,
     logout,
+    updatePreferences,
 } from "../controllers/authController.js";
 import { verifyToken } from "../middleware/verifyToken.js";
 
@@ -45,6 +46,12 @@ router.get("/me", verifyToken, getMe);
  * Saves LeetCode username after initial GitHub login
  */
 router.patch("/setup-leetcode", verifyToken, setupLeetcode);
+
+/**
+ * PATCH /auth/preferences
+ * Updates user settings preferences
+ */
+router.patch("/preferences", verifyToken, updatePreferences);
 
 /**
  * POST /auth/logout
