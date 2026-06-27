@@ -12,7 +12,7 @@ const signToken = (userId) =>
 const attachCookie = (res, token) => {
   res.cookie("dashx_token", token, {
     httpOnly: true,
-    secure: true,           // always true — both Render(HTTPS) and localhost via proxy
+    secure: true,
     sameSite: "none",       // required for cross-origin cookie (backend ≠ frontend domain)
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });

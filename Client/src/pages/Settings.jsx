@@ -29,6 +29,9 @@ const Settings = () => {
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState(null);
 
+  const [isPublic, setIsPublic] = useState(user?.isPublic ?? true);
+  const [privacySaving, setPrivacySaving] = useState(false);
+
   // ── preference toggles — UI-level only (not yet backed by an API) ──
   const [prefs, setPrefs] = useState({
     autoSync: true,
@@ -67,6 +70,20 @@ const Settings = () => {
       setSaveMessage({ type: "error", text: result.message });
     } else {
       setSaveMessage({ type: "success", text: "Sync complete." });
+    }
+  };
+
+  const handlePrivacyToggle = async () => {
+    const newValue = !isPublic;
+    setIsPublic(newValue);
+    setPrivacySaving(true);
+    try {
+      await api.patch("/public/privacy", { isPublic: newValue });
+    } catch {
+      // revert on failure
+      setIsPublic(!newValue);
+    } finally {
+      setPrivacySaving(false);
     }
   };
 
@@ -141,6 +158,17 @@ const Settings = () => {
           <h3 className="title-lg">Preferences</h3>
 
           <Toggle
+            label="Public profile"
+            sub={isPublic
+              ? `Visible at /u/${user?.githubUsername}`
+              : "Profile hidden from public"
+            }
+            checked={isPublic}
+            onChange={handlePrivacyToggle}
+            disabled={privacySaving}
+          />
+
+          <Toggle
             label="Auto sync daily"
             sub="Fetch latest data every 24h"
             checked={prefs.autoSync}
@@ -181,6 +209,28 @@ const Settings = () => {
             </div>
           )}
           {error && !saveMessage && <div className="sync-card__message sync-card__message--error">{error}</div>}
+
+          {isPublic && user?.leetcodeUsername && (
+            <div className="sync-card__public-url">
+              <span className="label-md">Your public profile</span>
+              <div className="sync-card__url-row">
+                <code className="sync-card__url mono">
+                  {window.location.origin}/u/{user.githubUsername}
+                </code>
+                <button
+                  className="btn btn--ghost"
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(
+                      `${window.location.origin}/u/${user.githubUsername}`
+                    );
+                  }}
+                >
+                  Copy
+                </button>
+              </div>
+            </div>
+          )}
 
           <button className="btn btn--primary btn--full" onClick={handleSync} disabled={syncing}>
             <RefreshIcon className={syncing ? "icon-spin" : ""} />

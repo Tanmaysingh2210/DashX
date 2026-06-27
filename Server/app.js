@@ -6,6 +6,7 @@ import cors from "cors";
 import passport from "./config/passport.js";// registers the GitHub strategy
 import authRoutes from "./routes/authRoutes.js";
 import activityRoutes from "./routes/activityRoutes.js";
+import publicRoutes from "./routes/pulicRoutes.js";
 import { errorHandler, notFound } from "./middleware/errorHandler.js";
 import { startAutoSync } from "./jobs/autoSync.js";
 import cron from "node-cron";
@@ -31,6 +32,7 @@ app.get("/", (req, res) => res.json({ status: "DashX API running" }));
 
 app.use("/auth", authRoutes);
 app.use("/activity", activityRoutes);
+app.use("/public", publicRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
@@ -50,8 +52,8 @@ cron.schedule("*/5 * * * *", async () => {
 });
 
 
-const port = process.env.PORT;
-app.listen(port, () => { `Server running at port ${port}` });
+const port = process.env.PORT || 5000;
+app.listen(port, () => { console.log(`Server running at port ${port}`); });
 // start background auto-sync — runs every hour
 // syncs users whose lastSynced > 24h ago
 startAutoSync();

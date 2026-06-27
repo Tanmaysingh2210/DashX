@@ -250,8 +250,16 @@
 
 /* ── small mobile (≤ 400px) ── */
 @media (max-width: 400px) {
+
   /* heatmap stats: single column on very small phones */
   .dashboard__heatmap-stats {
     grid-template-columns: 1fr;
   }
+}
+
+.dashboard__header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
 }

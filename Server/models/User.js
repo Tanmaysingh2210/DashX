@@ -5,7 +5,7 @@ const userSchema = new Schema(
     githubId: {
       type: String,
       required: true,
-      unique: true, 
+      unique: true,
     },
     githubUsername: {
       type: String,
@@ -34,9 +34,13 @@ const userSchema = new Schema(
       type: Number,
       default: 0,
     },
+    isPublic: {
+      type: Boolean,
+      default: true,
+    },
   },
   {
-    timestamps: true, 
+    timestamps: true,
   }
 );
 

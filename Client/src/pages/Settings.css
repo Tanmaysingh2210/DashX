@@ -173,8 +173,34 @@
 /* ── responsive ── */
 
 @media (max-width: 1024px) {
+
   .settings-grid,
   .settings-grid--bottom {
     grid-template-columns: 1fr;
   }
+}
+
+
+
+.sync-card__public-url {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--color-surface-lowest);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.sync-card__url-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.sync-card__url {
+  font-size: var(--fs-code-sm);
+  color: var(--color-primary);
+  word-break: break-all;
 }

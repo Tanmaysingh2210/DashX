@@ -9,6 +9,7 @@ import Setup from "./pages/Setup";
 import Dashboard from "./pages/Dashboard";
 import Activity from "./pages/Activity";
 import Settings from "./pages/Settings";
+import PublicProfile from "./pages/PublicProfile";
 
 /**
  * App
@@ -26,6 +27,8 @@ function App() {
       <Navbar />
       <Routes>
         <Route path="/" element={<Home />} />
+        {/* <Route path="/auth/callback" element={<AuthCallback />} /> */}
+        <Route path="/u/:username" element={<PublicProfile />} />
 
         {/* /setup is protected (needs GitHub login) but doesn't need
             activity data yet — kept outside ActivityProvider */}

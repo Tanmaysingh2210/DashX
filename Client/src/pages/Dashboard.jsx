@@ -260,7 +260,7 @@
 
 
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useActivity } from "../context/ActivityContext";
 import Heatmap from "../components/Heatmap";
@@ -276,9 +276,11 @@ import {
   ClockIcon,
 } from "../components/Icons";
 import "./Dashboard.css";
+import { ShareIcon } from "../assets/Icons";
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
 
 const formatRelative = (dateStr) => {
   if (!dateStr) return "Never";
@@ -292,6 +294,7 @@ const formatRelative = (dateStr) => {
 };
 
 const Dashboard = () => {
+  const [copied, setCopied] = useState(false);
   const { user } = useAuth();
   const { days, stats, loading, syncing, error, loadAll, sync } = useActivity();
 
@@ -408,6 +411,13 @@ const Dashboard = () => {
     };
   }, [days]);
 
+  const handleShare = () => {
+    const url = `${window.location.origin}/u/${user?.githubUsername}`;
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   const handleSync = async () => {
     await sync();
   };
@@ -421,10 +431,21 @@ const Dashboard = () => {
             Last synced {stats?.lastSynced ? formatRelative(stats.lastSynced) : "never"}
           </p>
         </div>
-        <button className="btn btn--secondary" onClick={handleSync} disabled={syncing}>
-          <RefreshIcon className={syncing ? "icon-spin" : ""} />
-          {syncing ? "Syncing..." : "Sync now"}
-        </button>
+        <div className="dashboard__header-actions">
+          <button
+            className="btn btn--secondary"
+            onClick={handleShare}
+            title={`Copy link: /u/${user?.githubUsername}`}
+            type="button"
+          >
+            <ShareIcon />
+            {copied ? "Copied!" : "Share profile"}
+          </button>
+          <button className="btn btn--secondary" onClick={handleSync} disabled={syncing}>
+            <RefreshIcon className={syncing ? "icon-spin" : ""} />
+            {syncing ? "Syncing..." : "Sync now"}
+          </button>
+        </div>
       </div>
 
       {error && <div className="dashboard__error card">{error}</div>}
