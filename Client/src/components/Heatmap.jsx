@@ -42,17 +42,23 @@ const getLevel = (count, max) => {
 const buildWeeks = (days) => {
   const map = new Map(days.map((d) => [d.date, d]));
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // get today as a local YYYY-MM-DD string (matches what APIs/DB store)
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
-  const start = new Date(today);
-  start.setDate(start.getDate() - 52 * 7);
-  start.setDate(start.getDate() - start.getDay()); // back up to Sunday
+  // parse todayStr back to a UTC Date for arithmetic
+  const [ty, tm, td] = todayStr.split("-").map(Number);
+  const todayUTC = new Date(Date.UTC(ty, tm - 1, td));
+
+  // go back 52 weeks and align to Sunday
+  const start = new Date(todayUTC);
+  start.setUTCDate(start.getUTCDate() - 52 * 7);
+  start.setUTCDate(start.getUTCDate() - start.getUTCDay()); // back up to Sunday
 
   const weeks = [];
   let current = new Date(start);
 
-  while (current <= today) {
+  while (current <= todayUTC) {
     const week = [];
     for (let i = 0; i < 7; i++) {
       const dateStr = current.toISOString().split("T")[0];
@@ -62,16 +68,17 @@ const buildWeeks = (days) => {
         githubCount:   entry?.githubCount   || 0,
         leetcodeCount: entry?.leetcodeCount || 0,
         totalCount:    entry?.totalCount    || 0,
-        month:    current.getMonth(),
-        isFuture: current > today,
+        month:    current.getUTCMonth(),
+        isFuture: current > todayUTC,
       });
-      current.setDate(current.getDate() + 1);
+      current.setUTCDate(current.getUTCDate() + 1);
     }
     weeks.push(week);
   }
 
   return weeks;
 };
+
 
 const Heatmap = ({ days = [] }) => {
   const [hovered, setHovered] = useState(null);
@@ -89,7 +96,14 @@ const Heatmap = ({ days = [] }) => {
     weeks.forEach((week, i) => {
       const firstDay = week[0];
       if (firstDay.month !== lastMonth) {
-        markers.push({ weekIndex: i, label: MONTH_LABELS[firstDay.month] });
+        // Skip label for the very first month — it's always a partial
+        // fragment from the prior year (e.g. a few days of Jun 2025 when
+        // today is Jun 2026) and its label collides with the next month.
+        const isFirst = markers.length === 0;
+        markers.push({
+          weekIndex: i,
+          label: isFirst ? "" : MONTH_LABELS[firstDay.month],
+        });
         lastMonth = firstDay.month;
       }
     });

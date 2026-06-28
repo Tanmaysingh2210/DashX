@@ -34,7 +34,6 @@ const Settings = () => {
 
   // ── preference toggles ──
   const [prefs, setPrefs] = useState({
-    autoSync: user?.autoSync ?? true,
     includePrivate: user?.includePrivate ?? false,
     weeklyReports: user?.weeklyReports ?? false,
     notifications: user?.notifications ?? true,
@@ -44,7 +43,6 @@ const Settings = () => {
     if (user) {
       setIsPublic(user.isPublic ?? true);
       setPrefs({
-        autoSync: user.autoSync ?? true,
         includePrivate: user.includePrivate ?? false,
         weeklyReports: user.weeklyReports ?? false,
         notifications: user.notifications ?? true,
@@ -191,12 +189,6 @@ const Settings = () => {
             disabled={privacySaving}
           />
 
-          <Toggle
-            label="Auto sync daily"
-            sub="Fetch latest data every 24h"
-            checked={prefs.autoSync}
-            onChange={() => togglePref("autoSync")}
-          />
           <Toggle
             label="Include private GitHub"
             sub="Count private contributions"

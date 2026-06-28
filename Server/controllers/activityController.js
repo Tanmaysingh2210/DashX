@@ -81,10 +81,19 @@ export const getHeatmap = async (req, res) => {
   try {
     const userId = req.user._id;
 
-    const today = new Date().toISOString().split("T")[0];
-    const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .split("T")[0];
+    // Use the client's local date if provided, otherwise fall back to a
+    // timezone-safe "today" that covers both UTC and UTC+14 (the farthest
+    // ahead timezone).  This ensures today's commits/submissions always
+    // appear even when the server runs in UTC but the user is in IST/etc.
+    const clientToday = req.query.today;          // "YYYY-MM-DD" from client
+    const utcToday = new Date().toISOString().split("T")[0];
+    const today = clientToday || utcToday;
+
+    const oneYearAgo = (() => {
+      const [y, m, d] = today.split("-").map(Number);
+      const dt = new Date(Date.UTC(y - 1, m - 1, d));
+      return dt.toISOString().split("T")[0];
+    })();
 
     const from = req.query.from || oneYearAgo;
     const to = req.query.to || today;

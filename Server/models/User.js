@@ -38,10 +38,6 @@ const userSchema = new Schema(
       type: Boolean,
       default: true,
     },
-    autoSync: {
-      type: Boolean,
-      default: true,
-    },
     includePrivate: {
       type: Boolean,
       default: false,

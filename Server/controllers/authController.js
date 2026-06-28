@@ -62,7 +62,6 @@ export const getMe = (req, res) => {
     longestStreak,
     createdAt,
     isPublic,
-    autoSync,
     includePrivate,
     weeklyReports,
     notifications,
@@ -81,7 +80,6 @@ export const getMe = (req, res) => {
       joinedAt: createdAt,
       isSetupComplete: !!leetcodeUsername,
       isPublic: isPublic ?? true,
-      autoSync: autoSync ?? true,
       includePrivate: includePrivate ?? false,
       weeklyReports: weeklyReports ?? false,
       notifications: notifications ?? true,
@@ -130,7 +128,6 @@ export const setupLeetcode = async (req, res) => {
         avatar: user.avatar,
         isSetupComplete: true,
         isPublic: user.isPublic ?? true,
-        autoSync: user.autoSync ?? true,
         includePrivate: user.includePrivate ?? false,
         weeklyReports: user.weeklyReports ?? false,
         notifications: user.notifications ?? true,
@@ -151,13 +148,12 @@ export const setupLeetcode = async (req, res) => {
 
 /**
  * PATCH /auth/preferences
- * Body: { autoSync, includePrivate, weeklyReports, notifications }
+ * Body: { includePrivate, weeklyReports, notifications }
  */
 export const updatePreferences = async (req, res) => {
   try {
-    const { autoSync, includePrivate, weeklyReports, notifications } = req.body;
+    const { includePrivate, weeklyReports, notifications } = req.body;
     const updates = {};
-    if (typeof autoSync === "boolean") updates.autoSync = autoSync;
     if (typeof includePrivate === "boolean") updates.includePrivate = includePrivate;
     if (typeof weeklyReports === "boolean") updates.weeklyReports = weeklyReports;
     if (typeof notifications === "boolean") updates.notifications = notifications;
@@ -178,7 +174,6 @@ export const updatePreferences = async (req, res) => {
         joinedAt: user.createdAt,
         isSetupComplete: !!user.leetcodeUsername,
         isPublic: user.isPublic ?? true,
-        autoSync: user.autoSync ?? true,
         includePrivate: user.includePrivate ?? false,
         weeklyReports: user.weeklyReports ?? false,
         notifications: user.notifications ?? true,

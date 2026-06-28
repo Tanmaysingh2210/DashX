@@ -22,7 +22,10 @@ export const ActivityProvider = ({ children }) => {
   const [error, setError] = useState(null);
 
   const fetchHeatmap = useCallback(async (from, to) => {
-    const params = {};
+    const now = new Date();
+    const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
+    const params = { today: localToday };
     if (from) params.from = from;
     if (to) params.to = to;
 
@@ -30,6 +33,7 @@ export const ActivityProvider = ({ children }) => {
     setDays(data.days || []);
     return data.days;
   }, []);
+
 
   const fetchStats = useCallback(async () => {
     const { data } = await api.get("/activity/stats");

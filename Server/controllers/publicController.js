@@ -48,11 +48,15 @@ export const getPublicProfile = async (req, res) => {
         }
 
         // fetch last 365 days of active activity
-        const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
-            .toISOString()
-            .split("T")[0];
+        // accept client's local today for timezone safety
+        const clientToday = req.query.today;
+        const utcToday = new Date().toISOString().split("T")[0];
+        const today = clientToday || utcToday;
 
-        const today = new Date().toISOString().split("T")[0];
+        const oneYearAgo = (() => {
+            const [y, m, d] = today.split("-").map(Number);
+            return new Date(Date.UTC(y - 1, m - 1, d)).toISOString().split("T")[0];
+        })();
 
         const days = await Activity.find({
             userId: user._id,
