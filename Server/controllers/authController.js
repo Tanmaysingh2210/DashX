@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import { syncUserActivity } from "../services/activityService.js";
+import { extractLeetCodeUsername } from "../utils/sanitize.js";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -102,7 +103,7 @@ export const setupLeetcode = async (req, res) => {
       });
     }
 
-    const cleaned = leetcodeUsername.trim();
+    const cleaned = extractLeetCodeUsername(leetcodeUsername);
 
     if (cleaned.length < 2 || cleaned.length > 40) {
       return res.status(400).json({

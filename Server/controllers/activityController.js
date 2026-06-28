@@ -6,6 +6,7 @@ import {
   validateLeetCodeUsername,
 } from "../services/leetcodeService.js";
 import User from "../models/User.js";
+import { extractLeetCodeUsername } from "../utils/sanitize.js";
 import Activity from "../models/Activity.js";
 
 // ─── POST /activity/sync ─────────────────────────────────────────────────────
@@ -194,7 +195,7 @@ export const getStats = async (req, res) => {
  */
 export const validateUsernames = async (req, res) => {
   try {
-    const { leetcodeUsername } = req.body;
+    const leetcodeUsername = extractLeetCodeUsername(req.body.leetcodeUsername);
     const { githubUsername } = req.user;
 
     const [githubValid, leetcodeValid] = await Promise.all([
